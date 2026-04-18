@@ -106,6 +106,18 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     return _colorParaConductor(v.conductor!.id, _conductores);
   }
 
+
+  String _formatHora(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  TimeOfDay _parseHora(String hhmm) {
+    final partes = hhmm.split(':');
+    return TimeOfDay(
+      hour: int.tryParse(partes[0]) ?? 0,
+      minute: int.tryParse(partes.length > 1 ? partes[1] : '0') ?? 0,
+    );
+  }
+
   // ── CREAR VIAJE ──────────────────────────────────────────────────────────
 
   Future<void> _crearViaje() async {
@@ -121,6 +133,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     final dejadaCtrl = TextEditingController();
     final telefonoCtrl = TextEditingController();
     TimeOfDay horaSel = TimeOfDay.now();
+    TimeOfDay horaFinalizacionSel = TimeOfDay.now();
 
     await showDialog(
       context: context,
@@ -150,11 +163,24 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.access_time),
-                  title: Text('Hora: ${horaSel.format(ctx)}'),
+                  title: Text('Hora inicio: ${horaSel.format(ctx)}'),
                   onTap: () async {
                     final t = await showTimePicker(
                         context: ctx, initialTime: horaSel);
                     if (t != null) setDlg(() => horaSel = t);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.flag),
+                  title: Text(
+                      'Hora finalización: ${horaFinalizacionSel.format(ctx)}'),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                      context: ctx,
+                      initialTime: horaFinalizacionSel,
+                    );
+                    if (t != null) setDlg(() => horaFinalizacionSel = t);
                   },
                 ),
                 const SizedBox(height: 8),
@@ -197,12 +223,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   return;
                 }
 
-                final horaStr =
-                    '${horaSel.hour.toString().padLeft(2, '0')}:${horaSel.minute.toString().padLeft(2, '0')}';
+                final horaStr = _formatHora(horaSel);
+                final horaFinalizacionStr = _formatHora(horaFinalizacionSel);
                 final viaje = Viaje(
                   id: '',
                   dia: DateFormat('yyyy-MM-dd').format(_diaSeleccionado),
                   hora: horaStr,
+                  horaFinalizacion: horaFinalizacionStr,
                   puntorecogida: recogidaCtrl.text.trim(),
                   puntodejada: dejadaCtrl.text.trim(),
                   telefonocliente: telefonoCtrl.text.trim(),
@@ -240,11 +267,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     final dejadaCtrl = TextEditingController(text: v.puntodejada);
     final telefonoCtrl = TextEditingController(text: v.telefonocliente);
 
-    final partes = v.hora.split(':');
-    TimeOfDay horaSel = TimeOfDay(
-      hour: int.tryParse(partes[0]) ?? 0,
-      minute: int.tryParse(partes.length > 1 ? partes[1] : '0') ?? 0,
-    );
+    TimeOfDay horaSel = _parseHora(v.hora);
+    TimeOfDay horaFinalizacionSel = _parseHora(v.horaFinalizacion);
 
     await showDialog(
       context: context,
@@ -273,11 +297,24 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.access_time),
-                  title: Text('Hora: ${horaSel.format(ctx)}'),
+                  title: Text('Hora inicio: ${horaSel.format(ctx)}'),
                   onTap: () async {
                     final t = await showTimePicker(
                         context: ctx, initialTime: horaSel);
                     if (t != null) setDlg(() => horaSel = t);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.flag),
+                  title: Text(
+                      'Hora finalización: ${horaFinalizacionSel.format(ctx)}'),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                      context: ctx,
+                      initialTime: horaFinalizacionSel,
+                    );
+                    if (t != null) setDlg(() => horaFinalizacionSel = t);
                   },
                 ),
                 const SizedBox(height: 8),
@@ -320,13 +357,14 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   return;
                 }
 
-                final horaStr =
-                    '${horaSel.hour.toString().padLeft(2, '0')}:${horaSel.minute.toString().padLeft(2, '0')}';
+                final horaStr = _formatHora(horaSel);
+                final horaFinalizacionStr = _formatHora(horaFinalizacionSel);
 
                 final viajeEditado = Viaje(
                   id: v.id,
                   dia: v.dia,
                   hora: horaStr,
+                  horaFinalizacion: horaFinalizacionStr,
                   puntorecogida: recogidaCtrl.text.trim(),
                   puntodejada: dejadaCtrl.text.trim(),
                   telefonocliente: telefonoCtrl.text.trim(),

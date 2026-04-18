@@ -39,3 +39,19 @@ local.properties
 .DS_Store
 Thumbs.db
 *.log
+
+# Ignorar carpetas de plataformas que no usas o no quieres
+android/
+ios/
+windows/
+linux/
+macos/
+test/
+
+# Ignorar archivos de configuración de herramientas y logs
+.metadata
+pubspec.lock
+analysis_options.yaml
+devtools_options.yaml
+cosa.txt
+*.log

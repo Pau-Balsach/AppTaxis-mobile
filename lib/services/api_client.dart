@@ -76,11 +76,7 @@ class ApiClient {
   static Future<void> editarViaje(String id, Viaje viaje) async {
     final body = <String, dynamic>{
       'id': viaje.id,
-      'dia': viaje.dia,
-      'hora': viaje.hora,
-      'puntorecogida': viaje.puntorecogida,
-      'puntodejada': viaje.puntodejada,
-      'telefonocliente': viaje.telefonocliente,
+      ...viaje.toJson(),
     };
 
     if (viaje.conductor != null) {
