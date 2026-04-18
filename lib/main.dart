@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Añadido
 import 'screens/login_screen.dart';
 import 'screens/menu_screen.dart';
 import 'services/auth_service.dart';
 
-Future<void> main() async {
+final GlobalKey<ScaffoldMessengerState> rootScaffoldKey =
+GlobalKey<ScaffoldMessengerState>();
 
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: ".env");
-    debugPrint("Variables .env cargadas con éxito");
-  } catch (e) {
-    debugPrint("Error crítico cargando archivo .env: $e");
-  }
+  await dotenv.load(fileName: ".env");
 
   runApp(const AppTaxis());
 }
-
-final GlobalKey<ScaffoldMessengerState> rootScaffoldKey = GlobalKey<ScaffoldMessengerState>();
 
 class AppTaxis extends StatelessWidget {
   const AppTaxis({super.key});
@@ -26,9 +21,9 @@ class AppTaxis extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      scaffoldMessengerKey: rootScaffoldKey,
       title: 'AppTaxis',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
         useMaterial3: true,

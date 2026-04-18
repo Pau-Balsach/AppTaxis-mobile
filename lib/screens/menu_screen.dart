@@ -3,11 +3,11 @@ import '../models/admin.dart';
 import '../services/auth_service.dart';
 import 'conductores_screen.dart';
 import 'calendario_screen.dart';
+import 'clientes_screen.dart';
 import 'login_screen.dart';
 
 class MenuScreen extends StatelessWidget {
   final Admin admin;
-
   const MenuScreen({super.key, required this.admin});
 
   @override
@@ -26,7 +26,7 @@ class MenuScreen extends StatelessWidget {
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (_) => false,
+                      (_) => false,
                 );
               }
             },
@@ -38,18 +38,11 @@ class MenuScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Saludo
-            Text(
-              'Bienvenido,',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
-            ),
-            Text(
-              admin.email,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
+            Text('Bienvenido,',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey)),
+            Text(admin.email,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 40),
-
-            // Tarjeta Conductores
             _MenuCard(
               icono: Icons.people_alt_outlined,
               titulo: 'Conductores',
@@ -60,13 +53,21 @@ class MenuScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Tarjeta Calendario
+            _MenuCard(
+              icono: Icons.person_outlined,
+              titulo: 'Clientes',
+              subtitulo: 'Gestiona clientes y consulta su historial',
+              color: Colors.green,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ClientesScreen(admin: admin)),
+              ),
+            ),
+            const SizedBox(height: 16),
             _MenuCard(
               icono: Icons.calendar_month_outlined,
               titulo: 'Calendario de viajes',
               subtitulo: 'Visualiza y gestiona los viajes',
-              color: Colors.green,
+              color: Colors.orange,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => CalendarioScreen(admin: admin)),
               ),
@@ -118,11 +119,9 @@ class _MenuCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(titulo,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(subtitulo,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    Text(subtitulo, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                   ],
                 ),
               ),
