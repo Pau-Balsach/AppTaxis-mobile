@@ -1,62 +1,64 @@
-# AppTaxis
+# AppTaxis — Gestión de Taxis en la Palma de tu Mano 🚖
 
-AppTaxis es una solución móvil moderna diseñada para la gestión eficiente de conductores y viajes en tiempo real. Esta aplicación permite a los administradores organizar la logística diaria de forma sencilla e intuitiva.
+AppTaxis es una solución móvil moderna diseñada para la gestión eficiente de conductores y viajes en tiempo real. Esta aplicación permite a los administradores organizar la logística diaria de forma sencilla e intuitiva desde cualquier lugar.
 
 ---
 
-## 📋 Requisitos para el Usuario
+## 📋 Requisitos para el Usuario Final
 
 Para utilizar la aplicación correctamente, asegúrate de cumplir con lo siguiente:
 
-* **Dispositivo:** Smartphone o Tablet con Android 8.0 (Oreo) o superior.
-* **Conexión a Internet:** Se requiere una conexión activa (WiFi o Datos Móviles) para sincronizar viajes y conductores.
-* **Credenciales de acceso:** Debes disponer de una cuenta de administrador autorizada en el sistema.
+* **📱 Dispositivo:** Smartphone o Tablet con Android 8.0 (Oreo) o superior.
+* **🌐 Conexión a Internet:** Se requiere una conexión activa (WiFi o Datos Móviles) para sincronizar viajes y conductores.
+* **🔑 Credenciales de acceso:** Debes disponer de una cuenta de administrador autorizada previamente en el sistema.
 
 ---
 
 ## ⚙️ Configuración de Credenciales
 
-Para que la aplicación pueda conectarse con los servidores de base de datos y la API de gestión, es **obligatorio** configurar el archivo de entorno antes de compilar la aplicación:
+Para que la aplicación pueda conectarse con los servidores de base de datos y la API de gestión, es **obligatorio** configurar las claves antes de realizar la compilación:
 
-1. Localiza el archivo `.env` en la raíz del proyecto (si no existe, créalo basándote en `.env.example`).
-2. Rellena los siguientes valores con tus claves privadas:
+1.  Asegúrate de tener las credenciales configuradas en los archivos `api_client.dart` y `auth_service.dart`.
+2.  Si usas un archivo `.env`, rellena los siguientes valores:
 
-```env
-# Configuración de la API de Gestión
-API_BASE_URL=[https://tu-api-taxis.com](https://tu-api-taxis.com)
+API_BASE_URL=https://tu-api-taxis.com
 API_KEY=tu_clave_secreta_aquí
-
-# Configuración de Autenticación (Supabase)
-SUPABASE_URL=[https://tu-proyecto.supabase.co](https://tu-proyecto.supabase.co)
+SUPABASE_URL=https://tu-proyecto.supabase.co
 SUPABASE_ANON_KEY=tu_anon_key_aquí
-```
 
-## Estructura del proyecto
+---
 
-```
+## 🏗️ Estructura del Proyecto
+
+El código fuente está organizado siguiendo las mejores prácticas de Flutter para garantizar la escalabilidad:
+
 lib/
-├── main.dart                    ← Entrada, tema global, splash + restaurar sesión
-├── models/
-│   ├── admin.dart               ← Modelo sesión de usuario
-│   ├── conductor.dart           ← Modelo conductor
-│   └── viaje.dart               ← Modelo viaje
-├── services/
-│   ├── api_client.dart          ← Todas las llamadas a la API REST (X-API-Key)
-│   ├── auth_service.dart        ← Login/logout con Supabase Auth
-│   └── session_manager.dart     ← Estado global de sesión (en memoria)
-└── screens/
-    ├── login_screen.dart        ← Pantalla de login
-    ├── menu_screen.dart         ← Menú principal
-    ├── conductores_screen.dart  ← CRUD completo de conductores
-    └── calendario_screen.dart   ← Calendario con viajes por día
-```
+├── models/      # Definición de objetos de datos (Admin, Conductor, Viaje)
+├── screens/     # Pantallas de la interfaz de usuario (Login, Menú, Calendario...)
+├── services/    # Lógica de conexión con APIs, Supabase y autenticación
+└── main.dart    # Punto de entrada y configuración global de la aplicación
 
-## Funcionalidades implementadas
+---
 
-| Pantalla | Qué hace |
-|---|---|
-| Login | Llama a Supabase Auth igual que el desktop. Guarda el token de forma segura. |
-| Splash | Al arrancar la app restaura la sesión automáticamente si el token es válido. |
-| Menú | Navegación a Conductores y Calendario. Botón logout. |
-| Conductores | Lista todos, añade con validación de matrícula (1234ABC), edita nombre, elimina con confirmación. |
-| Calendario | Muestra puntos en los días con viajes, lista viajes del día seleccionado, crea y elimina viajes. |
+## 🚀 Funcionalidades Implementadas
+
+| Módulo | Descripción |
+| :--- | :--- |
+| **🔐 Control de Acceso** | Sistema de login seguro con restauración de sesión automática (Splash Screen). |
+| **👥 Gestión de Conductores** | Registro (CRUD) completo de conductores con validación de matrículas (formato 1234ABC). |
+| **📅 Calendario de Viajes** | Visualización interactiva de servicios por día con indicadores de ocupación. |
+| **⚡ Asignación en Vivo** | Creación y eliminación de viajes asignados a conductores específicos en tiempo real. |
+| **🛡️ Seguridad de Datos** | Almacenamiento cifrado de tokens de sesión mediante `flutter_secure_storage`. |
+
+---
+
+## 📦 Dependencias Principales
+
+La aplicación utiliza las siguientes tecnologías clave:
+
+* **`http`**: Comunicación robusta con el servidor central (API REST).
+* **`flutter_secure_storage`**: Cifrado de datos sensibles en el almacenamiento local.
+* **`table_calendar`**: Interfaz de calendario interactiva.
+* **`intl`**: Soporte para formatos de fecha/hora internacionales.
+
+---
