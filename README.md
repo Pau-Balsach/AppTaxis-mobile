@@ -28,19 +28,6 @@ SUPABASE_ANON_KEY=tu_anon_key_aquí
 
 ---
 
-## 🏗️ Estructura del Proyecto
-
-El código fuente está organizado siguiendo las mejores prácticas de Flutter para garantizar la escalabilidad:
-
-```text
-lib/
-├── models/      # Definición de objetos de datos (Admin, Conductor, Viaje)
-├── screens/     # Pantallas de la interfaz de usuario (Login, Menú, Calendario...)
-├── services/    # Lógica de conexión con APIs, Supabase y autenticación
-└── main.dart    # Punto de entrada y configuración global de la aplicación
-
----
-
 ## 🚀 Funcionalidades Implementadas
 
 | Módulo | Descripción |
@@ -63,3 +50,14 @@ La aplicación utiliza las siguientes tecnologías clave:
 * **`intl`**: Soporte para formatos de fecha/hora internacionales.
 
 ---
+
+## 🏗️ Estructura del Proyecto
+
+El código fuente está organizado siguiendo las mejores prácticas de Flutter para garantizar la escalabilidad:
+
+```text
+lib/
+├── models/      # Definición de objetos de datos (Admin, Conductor, Viaje)
+├── screens/     # Pantallas de la interfaz de usuario (Login, Menú, Calendario...)
+├── services/    # Lógica de conexión con APIs, Supabase y autenticación
+└── main.dart    # Punto de entrada y configuración global de la aplicación
