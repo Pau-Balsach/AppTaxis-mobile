@@ -32,6 +32,7 @@ SUPABASE_ANON_KEY=tu_anon_key_aquí
 
 El código fuente está organizado siguiendo las mejores prácticas de Flutter para garantizar la escalabilidad:
 
+```text
 lib/
 ├── models/      # Definición de objetos de datos (Admin, Conductor, Viaje)
 ├── screens/     # Pantallas de la interfaz de usuario (Login, Menú, Calendario...)
