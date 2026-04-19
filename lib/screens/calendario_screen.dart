@@ -8,7 +8,6 @@ import '../models/viaje.dart';
 import '../models/cliente.dart';
 import '../services/api_client.dart';
 
-// ── Paleta de colores para conductores ────────────────────────────────────────
 const List<Color> _conductorColors = [
   Color(0xFF1565C0),
   Color(0xFF2E7D32),
@@ -26,8 +25,6 @@ Color _colorParaConductor(int conductorId, List<Conductor> conductores) {
   return _conductorColors[idx % _conductorColors.length];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 class CalendarioScreen extends StatefulWidget {
   final Admin admin;
   const CalendarioScreen({super.key, required this.admin});
@@ -38,7 +35,7 @@ class CalendarioScreen extends StatefulWidget {
 
 class _CalendarioScreenState extends State<CalendarioScreen> {
   DateTime _diaSeleccionado = DateTime.now();
-  DateTime _focusMes = DateTime.now();
+  DateTime _focusMes        = DateTime.now();
 
   List<Viaje>     _viajesDelMes = [];
   List<Conductor> _conductores  = [];
@@ -52,8 +49,6 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     super.initState();
     _cargarTodo();
   }
-
-  // ── Carga ────────────────────────────────────────────────────────────────
 
   Future<void> _cargarTodo() async {
     if (!mounted) return;
@@ -93,31 +88,34 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  List<Viaje> _viajesParaDia(DateTime dia) {
+    final diaStr = DateFormat('yyyy-MM-dd').format(dia);
+    return _viajesDelMes.where((v) {
+      if (v.dia == diaStr) return true;
+      if (v.cruzaMedianoche) {
+        return dia.isAfter(v.diaDateTime) &&
+            !dia.isAfter(v.diaFinDateTime);
+      }
+      return false;
+    }).toList();
+  }
 
-  List<Viaje> get _viajesDia => _viajesDelMes
-      .where((v) => v.dia == DateFormat('yyyy-MM-dd').format(_diaSeleccionado))
-      .toList()
-    ..sort((a, b) => a.hora.compareTo(b.hora));
-
-  List<Viaje> _viajesParaDia(DateTime dia) => _viajesDelMes
-      .where((v) => v.dia == DateFormat('yyyy-MM-dd').format(dia))
-      .toList();
+  List<Viaje> get _viajesDia {
+    final diaStr = DateFormat('yyyy-MM-dd').format(_diaSeleccionado);
+    return _viajesDelMes.where((v) {
+      if (v.dia == diaStr) return true;
+      if (v.cruzaMedianoche) {
+        return _diaSeleccionado.isAfter(v.diaDateTime) &&
+            !_diaSeleccionado.isAfter(v.diaFinDateTime);
+      }
+      return false;
+    }).toList()
+      ..sort((a, b) => a.hora.compareTo(b.hora));
+  }
 
   Color _colorViaje(Viaje v) {
     if (v.conductor == null) return Colors.grey;
     return _colorParaConductor(v.conductor!.id, _conductores);
-  }
-
-  String _formatHora(TimeOfDay time) =>
-      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-
-  TimeOfDay _parseHora(String hhmm) {
-    final partes = hhmm.split(':');
-    return TimeOfDay(
-      hour: int.tryParse(partes[0]) ?? 0,
-      minute: int.tryParse(partes.length > 1 ? partes[1] : '0') ?? 0,
-    );
   }
 
   // ── CREAR VIAJE ──────────────────────────────────────────────────────────
@@ -130,345 +128,44 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       return;
     }
 
-    Conductor? conductorSel       = _conductorFiltro ?? _conductores.first;
-    Cliente?   clienteSel         = null;
-    final recogidaCtrl            = TextEditingController();
-    final dejadaCtrl              = TextEditingController();
-    final telefonoCtrl            = TextEditingController();
-    TimeOfDay horaSel             = TimeOfDay.now();
-    TimeOfDay horaFinalizacionSel = TimeOfDay.now();
-
-    await showDialog(
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlg) => AlertDialog(
-          title: Text(
-              'Nuevo viaje — ${DateFormat('dd/MM/yyyy').format(_diaSeleccionado)}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                // Conductor
-                DropdownButtonFormField<Conductor>(
-                  value: conductorSel,
-                  decoration: const InputDecoration(
-                      labelText: 'Conductor',
-                      border: OutlineInputBorder()),
-                  items: _conductores
-                      .map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text('${c.nombre} — ${c.matricula}'),
-                  ))
-                      .toList(),
-                  onChanged: (v) => setDlg(() => conductorSel = v),
-                ),
-                const SizedBox(height: 12),
-
-                // Cliente con buscador
-                _SelectorCliente(
-                  clientes: _clientes,
-                  seleccionado: clienteSel,
-                  onChanged: (c) => setDlg(() {
-                    clienteSel = c;
-                    if (c != null) telefonoCtrl.text = c.telefono;
-                  }),
-                ),
-                const SizedBox(height: 12),
-
-                // Hora inicio
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.access_time),
-                  title: Text('Hora inicio: ${horaSel.format(ctx)}'),
-                  onTap: () async {
-                    final t = await showTimePicker(
-                        context: ctx, initialTime: horaSel);
-                    if (t != null) setDlg(() => horaSel = t);
-                  },
-                ),
-
-                // Hora finalización
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.flag),
-                  title: Text(
-                      'Hora finalización: ${horaFinalizacionSel.format(ctx)}'),
-                  onTap: () async {
-                    final t = await showTimePicker(
-                      context: ctx,
-                      initialTime: horaFinalizacionSel,
-                    );
-                    if (t != null) setDlg(() => horaFinalizacionSel = t);
-                  },
-                ),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: recogidaCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Punto de recogida',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: dejadaCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Punto de dejada',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-
-                // Teléfono — se autocompleta al seleccionar cliente
-                TextField(
-                  controller: telefonoCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Teléfono cliente',
-                    border: const OutlineInputBorder(),
-                    helperText: clienteSel != null
-                        ? 'Autocompletado desde cliente'
-                        : null,
-                    suffixIcon: clienteSel != null
-                        ? Icon(Icons.person, color: Colors.green.shade600, size: 18)
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () async {
-                if (recogidaCtrl.text.trim().isEmpty ||
-                    dejadaCtrl.text.trim().isEmpty ||
-                    telefonoCtrl.text.trim().isEmpty) {
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Rellena todos los campos.')),
-                  );
-                  return;
-                }
-
-                final viaje = Viaje(
-                  id: '',
-                  dia: DateFormat('yyyy-MM-dd').format(_diaSeleccionado),
-                  hora: _formatHora(horaSel),
-                  horaFinalizacion: _formatHora(horaFinalizacionSel),
-                  puntorecogida: recogidaCtrl.text.trim(),
-                  puntodejada: dejadaCtrl.text.trim(),
-                  telefonocliente: telefonoCtrl.text.trim(),
-                );
-
-                try {
-                  await ApiClient.crearViaje(
-                    conductorSel!.id,
-                    viaje,
-                    clienteId: clienteSel?.id,
-                  );
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  await _cargarTodo();
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Viaje creado correctamente.')),
-                  );
-                } catch (e) {
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Error al guardar el viaje.')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
+      builder: (ctx) => _DialogoCrearViaje(
+        diaSeleccionado: _diaSeleccionado,
+        conductores: _conductores,
+        clientes: _clientes,
+        conductorFiltro: _conductorFiltro,
       ),
     );
 
-    recogidaCtrl.dispose();
-    dejadaCtrl.dispose();
-    telefonoCtrl.dispose();
+    if (result == true) {
+      await _cargarTodo();
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Viaje creado correctamente.')),
+      );
+    }
   }
 
   // ── EDITAR VIAJE ──────────────────────────────────────────────────────────
 
   Future<void> _editarViaje(Viaje v) async {
-    Conductor? conductorSel = _conductores.firstWhere(
-            (c) => c.id == v.conductor?.id,
-        orElse: () => _conductores.first);
-
-    // Preseleccionar cliente si el viaje ya tiene uno
-    Cliente? clienteSel = v.cliente != null
-        ? _clientes.firstWhere(
-          (c) => c.id == v.cliente!.id,
-      orElse: () => _clientes.first,
-    )
-        : null;
-
-    final recogidaCtrl  = TextEditingController(text: v.puntorecogida);
-    final dejadaCtrl    = TextEditingController(text: v.puntodejada);
-    final telefonoCtrl  = TextEditingController(text: v.telefonocliente);
-    TimeOfDay horaSel             = _parseHora(v.hora);
-    TimeOfDay horaFinalizacionSel = _parseHora(v.horaFinalizacion);
-
-    await showDialog(
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlg) => AlertDialog(
-          title: const Text('Editar viaje'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                // Conductor
-                DropdownButtonFormField<Conductor>(
-                  value: conductorSel,
-                  decoration: const InputDecoration(
-                      labelText: 'Conductor',
-                      border: OutlineInputBorder()),
-                  items: _conductores
-                      .map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text('${c.nombre} — ${c.matricula}'),
-                  ))
-                      .toList(),
-                  onChanged: (val) => setDlg(() => conductorSel = val),
-                ),
-                const SizedBox(height: 12),
-
-                // Cliente con buscador
-                _SelectorCliente(
-                  clientes: _clientes,
-                  seleccionado: clienteSel,
-                  onChanged: (c) => setDlg(() {
-                    clienteSel = c;
-                    if (c != null) telefonoCtrl.text = c.telefono;
-                  }),
-                ),
-                const SizedBox(height: 12),
-
-                // Hora inicio
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.access_time),
-                  title: Text('Hora inicio: ${horaSel.format(ctx)}'),
-                  onTap: () async {
-                    final t = await showTimePicker(
-                        context: ctx, initialTime: horaSel);
-                    if (t != null) setDlg(() => horaSel = t);
-                  },
-                ),
-
-                // Hora finalización
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.flag),
-                  title: Text(
-                      'Hora finalización: ${horaFinalizacionSel.format(ctx)}'),
-                  onTap: () async {
-                    final t = await showTimePicker(
-                      context: ctx,
-                      initialTime: horaFinalizacionSel,
-                    );
-                    if (t != null) setDlg(() => horaFinalizacionSel = t);
-                  },
-                ),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: recogidaCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Punto de recogida',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: dejadaCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Punto de dejada',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-
-                // Teléfono
-                TextField(
-                  controller: telefonoCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Teléfono cliente',
-                    border: const OutlineInputBorder(),
-                    helperText: clienteSel != null
-                        ? 'Autocompletado desde cliente'
-                        : null,
-                    suffixIcon: clienteSel != null
-                        ? Icon(Icons.person, color: Colors.green.shade600, size: 18)
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () async {
-                if (recogidaCtrl.text.trim().isEmpty ||
-                    dejadaCtrl.text.trim().isEmpty ||
-                    telefonoCtrl.text.trim().isEmpty) {
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Rellena todos los campos.')),
-                  );
-                  return;
-                }
-
-                final viajeEditado = Viaje(
-                  id: v.id,
-                  dia: v.dia,
-                  hora: _formatHora(horaSel),
-                  horaFinalizacion: _formatHora(horaFinalizacionSel),
-                  puntorecogida: recogidaCtrl.text.trim(),
-                  puntodejada: dejadaCtrl.text.trim(),
-                  telefonocliente: telefonoCtrl.text.trim(),
-                  conductor: conductorSel,
-                  cliente: clienteSel,
-                );
-
-                try {
-                  await ApiClient.editarViaje(
-                    v.id,
-                    viajeEditado,
-                    clienteId: clienteSel?.id,
-                    conductorId: conductorSel?.id,
-                  );
-
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  await _cargarTodo();
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Viaje actualizado correctamente.')),
-                  );
-                } catch (e) {
-                  print("Error al editar: $e");
-                  rootScaffoldKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Error al actualizar el viaje.')),
-                  );
-                }
-              },
-              child: const Text('Actualizar'),
-            ),
-          ],
-        ),
+      builder: (ctx) => _DialogoEditarViaje(
+        viaje: v,
+        conductores: _conductores,
+        clientes: _clientes,
       ),
     );
 
-    recogidaCtrl.dispose();
-    dejadaCtrl.dispose();
-    telefonoCtrl.dispose();
+    if (result == true) {
+      await _cargarTodo();
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Viaje actualizado correctamente.')),
+      );
+    }
   }
 
   // ── ELIMINAR VIAJE ────────────────────────────────────────────────────────
@@ -517,7 +214,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         backgroundColor: Colors.amber,
         foregroundColor: Colors.black,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _cargarTodo)
+          IconButton(
+              icon: const Icon(Icons.refresh), onPressed: _cargarTodo)
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -531,7 +229,6 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // Filtro conductor
           _FiltroCondutor(
             conductores: _conductores,
             seleccionado: _conductorFiltro,
@@ -540,17 +237,14 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               _cargarTodo();
             },
           ),
-
-          // Leyenda
           if (_conductores.isNotEmpty)
             _LeyendaColores(conductores: _conductores),
-
-          // Calendario
           TableCalendar<Viaje>(
             firstDay: DateTime(2020),
             lastDay: DateTime(2030),
             focusedDay: _focusMes,
-            selectedDayPredicate: (d) => isSameDay(d, _diaSeleccionado),
+            selectedDayPredicate: (d) =>
+                isSameDay(d, _diaSeleccionado),
             eventLoader: _viajesParaDia,
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(
@@ -570,8 +264,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: events.take(4).map((viaje) {
                       return Container(
-                        margin:
-                        const EdgeInsets.symmetric(horizontal: 1.5),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 1.5),
                         width: 7.0,
                         height: 7.0,
                         decoration: BoxDecoration(
@@ -585,7 +279,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               },
             ),
             headerStyle: const HeaderStyle(
-                formatButtonVisible: false, titleCentered: true),
+                formatButtonVisible: false,
+                titleCentered: true),
             onDaySelected: (sel, foc) => setState(() {
               _diaSeleccionado = sel;
               _focusMes = foc;
@@ -596,8 +291,6 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             },
           ),
           const Divider(height: 1),
-
-          // Lista viajes del día
           Expanded(
             child: _viajesDia.isEmpty
                 ? Center(
@@ -607,8 +300,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               ),
             )
                 : ListView.separated(
-              padding:
-              const EdgeInsets.fromLTRB(12, 12, 12, 80),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
               itemCount: _viajesDia.length,
               separatorBuilder: (_, __) =>
               const SizedBox(height: 8),
@@ -629,7 +321,500 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   }
 }
 
-// ── Widget: selector de cliente con buscador ──────────────────────────────────
+// ── Diálogos extraídos para control seguro de estado y controladores ──────────
+
+class _DialogoCrearViaje extends StatefulWidget {
+  final DateTime diaSeleccionado;
+  final List<Conductor> conductores;
+  final List<Cliente> clientes;
+  final Conductor? conductorFiltro;
+
+  const _DialogoCrearViaje({
+    required this.diaSeleccionado,
+    required this.conductores,
+    required this.clientes,
+    required this.conductorFiltro,
+  });
+
+  @override
+  State<_DialogoCrearViaje> createState() => _DialogoCrearViajeState();
+}
+
+class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
+  late Conductor conductorSel;
+  Cliente? clienteSel;
+  late DateTime diaFinSel;
+  late TimeOfDay horaSel;
+  late TimeOfDay horaFinSel;
+
+  final recogidaCtrl = TextEditingController();
+  final dejadaCtrl = TextEditingController();
+  final telefonoCtrl = TextEditingController();
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    conductorSel = widget.conductorFiltro ?? widget.conductores.first;
+    diaFinSel = widget.diaSeleccionado;
+    horaSel = TimeOfDay.now();
+    horaFinSel = TimeOfDay.now();
+  }
+
+  @override
+  void dispose() {
+    recogidaCtrl.dispose();
+    dejadaCtrl.dispose();
+    telefonoCtrl.dispose();
+    super.dispose();
+  }
+
+  String _formatHora(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Nuevo viaje — ${DateFormat('dd/MM/yyyy').format(widget.diaSeleccionado)}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<Conductor>(
+              value: conductorSel,
+              decoration: const InputDecoration(
+                  labelText: 'Conductor', border: OutlineInputBorder()),
+              items: widget.conductores.map((c) => DropdownMenuItem(
+                value: c,
+                child: Text('${c.nombre} — ${c.matricula}'),
+              )).toList(),
+              onChanged: (v) {
+                if (v != null) setState(() => conductorSel = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            _SelectorCliente(
+              clientes: widget.clientes,
+              seleccionado: clienteSel,
+              onChanged: (c) {
+                setState(() {
+                  clienteSel = c;
+                  if (c != null) telefonoCtrl.text = c.telefono;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.access_time),
+              title: Text('Hora inicio: ${horaSel.format(context)}'),
+              subtitle: Text(
+                DateFormat('dd/MM/yyyy').format(widget.diaSeleccionado),
+                style: const TextStyle(fontSize: 12),
+              ),
+              onTap: () async {
+                final t = await showTimePicker(context: context, initialTime: horaSel);
+                if (t != null) setState(() => horaSel = t);
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.flag),
+              title: Text('Hora fin: ${horaFinSel.format(context)}'),
+              subtitle: Row(
+                children: [
+                  Text(
+                    DateFormat('dd/MM/yyyy').format(diaFinSel),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: diaFinSel.isAfter(widget.diaSeleccionado)
+                          ? Colors.orange.shade700
+                          : null,
+                    ),
+                  ),
+                  if (diaFinSel.isAfter(widget.diaSeleccionado))
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('cruza medianoche',
+                            style: TextStyle(fontSize: 10, color: Colors.orange.shade800)),
+                      ),
+                    ),
+                ],
+              ),
+              onTap: () async {
+                final t = await showTimePicker(context: context, initialTime: horaFinSel);
+                if (t == null) return;
+                setState(() => horaFinSel = t);
+
+                final inicioMin = horaSel.hour * 60 + horaSel.minute;
+                final finMin = t.hour * 60 + t.minute;
+                if (finMin < inicioMin) {
+                  final diaSig = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('¿Día siguiente?'),
+                      content: const Text('La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: const Text('No, mismo día')),
+                        ElevatedButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('Sí, día siguiente')),
+                      ],
+                    ),
+                  );
+                  if (diaSig == true) {
+                    setState(() => diaFinSel = widget.diaSeleccionado.add(const Duration(days: 1)));
+                  }
+                } else {
+                  setState(() => diaFinSel = widget.diaSeleccionado);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: recogidaCtrl,
+              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: dejadaCtrl,
+              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: telefonoCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Teléfono cliente',
+                border: const OutlineInputBorder(),
+                helperText: clienteSel != null ? 'Autocompletado desde cliente' : null,
+                suffixIcon: clienteSel != null
+                    ? Icon(Icons.person, color: Colors.green.shade600, size: 18)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar')),
+        ElevatedButton(
+          onPressed: _guardando ? null : _guardar,
+          child: _guardando
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _guardar() async {
+    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Rellena todos los campos.')),
+      );
+      return;
+    }
+
+    setState(() => _guardando = true);
+
+    final viaje = Viaje(
+      id: '',
+      dia: DateFormat('yyyy-MM-dd').format(widget.diaSeleccionado),
+      diaFin: DateFormat('yyyy-MM-dd').format(diaFinSel),
+      hora: _formatHora(horaSel),
+      horaFinalizacion: _formatHora(horaFinSel),
+      puntorecogida: recogidaCtrl.text.trim(),
+      puntodejada: dejadaCtrl.text.trim(),
+      telefonocliente: telefonoCtrl.text.trim(),
+    );
+
+    try {
+      await ApiClient.crearViaje(
+        conductorSel.id,
+        viaje,
+        clienteId: clienteSel?.id,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Error al guardar el viaje.')),
+      );
+    }
+  }
+}
+
+class _DialogoEditarViaje extends StatefulWidget {
+  final Viaje viaje;
+  final List<Conductor> conductores;
+  final List<Cliente> clientes;
+
+  const _DialogoEditarViaje({
+    required this.viaje,
+    required this.conductores,
+    required this.clientes,
+  });
+
+  @override
+  State<_DialogoEditarViaje> createState() => _DialogoEditarViajeState();
+}
+
+class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
+  late Conductor conductorSel;
+  Cliente? clienteSel;
+  late DateTime diaInicio;
+  late DateTime diaFinSel;
+  late TimeOfDay horaSel;
+  late TimeOfDay horaFinSel;
+
+  late TextEditingController recogidaCtrl;
+  late TextEditingController dejadaCtrl;
+  late TextEditingController telefonoCtrl;
+  bool _guardando = false;
+
+  TimeOfDay _parseHora(String hhmm) {
+    final p = hhmm.split(':');
+    return TimeOfDay(
+      hour: int.tryParse(p[0]) ?? 0,
+      minute: int.tryParse(p.length > 1 ? p[1] : '0') ?? 0,
+    );
+  }
+
+  String _formatHora(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.viaje;
+
+    conductorSel = widget.conductores.firstWhere(
+            (c) => c.id == v.conductor?.id,
+        orElse: () => widget.conductores.first);
+
+    clienteSel = v.cliente != null
+        ? widget.clientes.firstWhere((c) => c.id == v.cliente!.id,
+        orElse: () => widget.clientes.first)
+        : null;
+
+    diaInicio = DateTime.parse(v.dia);
+    diaFinSel = v.diaFin != null ? DateTime.parse(v.diaFin!) : diaInicio;
+
+    horaSel = _parseHora(v.hora);
+    horaFinSel = _parseHora(v.horaFinalizacion);
+
+    recogidaCtrl = TextEditingController(text: v.puntorecogida);
+    dejadaCtrl = TextEditingController(text: v.puntodejada);
+    telefonoCtrl = TextEditingController(text: v.telefonocliente);
+  }
+
+  @override
+  void dispose() {
+    recogidaCtrl.dispose();
+    dejadaCtrl.dispose();
+    telefonoCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar viaje'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<Conductor>(
+              value: conductorSel,
+              decoration: const InputDecoration(
+                  labelText: 'Conductor', border: OutlineInputBorder()),
+              items: widget.conductores.map((c) => DropdownMenuItem(
+                value: c,
+                child: Text('${c.nombre} — ${c.matricula}'),
+              )).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => conductorSel = val);
+              },
+            ),
+            const SizedBox(height: 12),
+            _SelectorCliente(
+              clientes: widget.clientes,
+              seleccionado: clienteSel,
+              onChanged: (c) {
+                setState(() {
+                  clienteSel = c;
+                  if (c != null) telefonoCtrl.text = c.telefono;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.access_time),
+              title: Text('Hora inicio: ${horaSel.format(context)}'),
+              subtitle: Text(
+                DateFormat('dd/MM/yyyy').format(diaInicio),
+                style: const TextStyle(fontSize: 12),
+              ),
+              onTap: () async {
+                final t = await showTimePicker(context: context, initialTime: horaSel);
+                if (t != null) setState(() => horaSel = t);
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.flag),
+              title: Text('Hora fin: ${horaFinSel.format(context)}'),
+              subtitle: Row(
+                children: [
+                  Text(
+                    DateFormat('dd/MM/yyyy').format(diaFinSel),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: diaFinSel.isAfter(diaInicio) ? Colors.orange.shade700 : null,
+                    ),
+                  ),
+                  if (diaFinSel.isAfter(diaInicio))
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('cruza medianoche',
+                            style: TextStyle(fontSize: 10, color: Colors.orange.shade800)),
+                      ),
+                    ),
+                ],
+              ),
+              onTap: () async {
+                final t = await showTimePicker(context: context, initialTime: horaFinSel);
+                if (t == null) return;
+                setState(() => horaFinSel = t);
+
+                final inicioMin = horaSel.hour * 60 + horaSel.minute;
+                final finMin = t.hour * 60 + t.minute;
+                if (finMin < inicioMin) {
+                  final diaSig = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('¿Día siguiente?'),
+                      content: const Text('La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: const Text('No, mismo día')),
+                        ElevatedButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('Sí, día siguiente')),
+                      ],
+                    ),
+                  );
+                  if (diaSig == true) {
+                    setState(() => diaFinSel = diaInicio.add(const Duration(days: 1)));
+                  } else {
+                    setState(() => diaFinSel = diaInicio);
+                  }
+                } else {
+                  setState(() => diaFinSel = diaInicio);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: recogidaCtrl,
+              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: dejadaCtrl,
+              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: telefonoCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Teléfono cliente',
+                border: const OutlineInputBorder(),
+                helperText: clienteSel != null ? 'Autocompletado desde cliente' : null,
+                suffixIcon: clienteSel != null
+                    ? Icon(Icons.person, color: Colors.green.shade600, size: 18)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar')),
+        ElevatedButton(
+          onPressed: _guardando ? null : _actualizar,
+          child: _guardando
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Actualizar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _actualizar() async {
+    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Rellena todos los campos.')),
+      );
+      return;
+    }
+
+    setState(() => _guardando = true);
+    debugPrint('diaFinSel: $diaFinSel');
+    debugPrint('diaInicio: $diaInicio');
+    final viajeEditado = Viaje(
+      id: widget.viaje.id,
+      dia: widget.viaje.dia,
+      diaFin: DateFormat('yyyy-MM-dd').format(diaFinSel),
+      hora: _formatHora(horaSel),
+      horaFinalizacion: _formatHora(horaFinSel),
+      puntorecogida: recogidaCtrl.text.trim(),
+      puntodejada: dejadaCtrl.text.trim(),
+      telefonocliente: telefonoCtrl.text.trim(),
+      conductor: conductorSel,
+      cliente: clienteSel,
+    );
+
+    try {
+      await ApiClient.editarViaje(
+        widget.viaje.id,
+        viajeEditado,
+        clienteId: clienteSel?.id,
+        conductorId: conductorSel.id,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      rootScaffoldKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Error al actualizar el viaje.')),
+      );
+    }
+  }
+  }
+
+// ── Selector de cliente ───────────────────────────────────────────────────────
 
 class _SelectorCliente extends StatefulWidget {
   final List<Cliente> clientes;
@@ -678,9 +863,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        // Campo de búsqueda
         TextField(
           controller: _busquedaCtrl,
           onChanged: _filtrar,
@@ -701,8 +884,6 @@ class _SelectorClienteState extends State<_SelectorCliente> {
                 : null,
           ),
         ),
-
-        // Cliente seleccionado
         if (widget.seleccionado != null)
           Container(
             margin: const EdgeInsets.only(top: 6),
@@ -718,8 +899,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${widget.seleccionado!.nombre} · ${widget.seleccionado!
-                        .telefono}',
+                    '${widget.seleccionado!.nombre} · ${widget.seleccionado!.telefono}',
                     style: TextStyle(
                         color: Colors.green.shade800,
                         fontWeight: FontWeight.w500),
@@ -728,30 +908,25 @@ class _SelectorClienteState extends State<_SelectorCliente> {
               ],
             ),
           ),
-
-        // Lista de resultados
+        // ── ÚNICO CAMBIO: ListView.builder reemplazado por SingleChildScrollView + Column ──
         if (_busquedaCtrl.text.isNotEmpty && widget.seleccionado == null)
           Container(
             margin: const EdgeInsets.only(top: 4),
+            constraints: const BoxConstraints(maxHeight: 160),
             decoration: BoxDecoration(
-              color: Colors.white,
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(8),
             ),
-            // SOLUCIÓN: Usamos Column en lugar de ListView.
-            // Como el diálogo ya tiene un SingleChildScrollView en calendario_screen.dart (línea 150),
-            // los resultados simplemente se añadirán al scroll general sin romper el layout.
             child: _filtrados.isEmpty
                 ? const Padding(
               padding: EdgeInsets.all(12),
               child: Text('Sin resultados',
                   style: TextStyle(color: Colors.grey)),
             )
-                : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: _filtrados.take(10).map((
-                  c) { // Limitamos a 10 resultados por rendimiento
-                return ListTile(
+                : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _filtrados.map((c) => ListTile(
                   dense: true,
                   leading: CircleAvatar(
                     radius: 14,
@@ -770,11 +945,11 @@ class _SelectorClienteState extends State<_SelectorCliente> {
                       style: const TextStyle(fontSize: 12)),
                   onTap: () {
                     _busquedaCtrl.clear();
-                    // No hace falta resetear _filtrados aquí ya que el widget se reconstruirá
+                    setState(() => _filtrados = widget.clientes);
                     widget.onChanged(c);
                   },
-                );
-              }).toList(),
+                )).toList(),
+              ),
             ),
           ),
       ],
@@ -782,7 +957,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
   }
 }
 
-// ── Widget: filtro de conductor ───────────────────────────────────────────────
+// ── Filtro conductor ──────────────────────────────────────────────────────────
 
 class _FiltroCondutor extends StatelessWidget {
   final List<Conductor> conductores;
@@ -836,7 +1011,7 @@ class _FiltroCondutor extends StatelessWidget {
   }
 }
 
-// ── Widget: leyenda de colores ────────────────────────────────────────────────
+// ── Leyenda colores ───────────────────────────────────────────────────────────
 
 class _LeyendaColores extends StatelessWidget {
   final List<Conductor> conductores;
@@ -872,7 +1047,7 @@ class _LeyendaColores extends StatelessWidget {
   }
 }
 
-// ── Widget: tarjeta de viaje ──────────────────────────────────────────────────
+// ── Tarjeta viaje ─────────────────────────────────────────────────────────────
 
 class _TarjetaViaje extends StatelessWidget {
   final Viaje viaje;
@@ -889,6 +1064,11 @@ class _TarjetaViaje extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cruzaMedianoche = viaje.cruzaMedianoche;
+    final diaFinStr = viaje.diaFin != null
+        ? DateFormat('dd/MM').format(DateTime.parse(viaje.diaFin!))
+        : null;
+
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -916,10 +1096,34 @@ class _TarjetaViaje extends StatelessWidget {
                     color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    viaje.hora,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: color),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(viaje.hora,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: color)),
+                      if (viaje.horaFinalizacion.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              viaje.horaFinalizacion,
+                              style: TextStyle(
+                                  fontSize: 11, color: color.withOpacity(0.8)),
+                            ),
+                            if (cruzaMedianoche && diaFinStr != null)
+                              Text(
+                                ' +1',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.orange.shade700,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -936,7 +1140,6 @@ class _TarjetaViaje extends StatelessWidget {
                           fontSize: 15, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
-                    // Conductor y teléfono
                     Text(
                       viaje.conductor != null
                           ? (viaje.telefonocliente.trim().isNotEmpty
@@ -946,23 +1149,31 @@ class _TarjetaViaje extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 13, color: Colors.grey.shade700),
                     ),
-                    // Cliente asignado (si existe)
                     if (viaje.cliente != null) ...[
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.person,
-                              size: 12, color: Colors.green.shade600),
-                          const SizedBox(width: 3),
-                          Text(
-                            viaje.cliente!.nombre,
+                      Row(children: [
+                        Icon(Icons.person,
+                            size: 12, color: Colors.green.shade600),
+                        const SizedBox(width: 3),
+                        Text(viaje.cliente!.nombre,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.green.shade700,
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
+                                fontWeight: FontWeight.w500)),
+                      ]),
+                    ],
+                    if (cruzaMedianoche && diaFinStr != null) ...[
+                      const SizedBox(height: 2),
+                      Row(children: [
+                        Icon(Icons.nightlight_round,
+                            size: 12, color: Colors.orange.shade600),
+                        const SizedBox(width: 3),
+                        Text('Hasta el $diaFinStr',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500)),
+                      ]),
                     ],
                   ],
                 ),

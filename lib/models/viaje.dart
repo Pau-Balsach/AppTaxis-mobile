@@ -4,6 +4,7 @@ import 'cliente.dart';
 class Viaje {
   final String id;
   final String dia;
+  final String? diaFin;
   final String hora;
   final String horaFinalizacion;
   final String puntorecogida;
@@ -15,6 +16,7 @@ class Viaje {
   Viaje({
     required this.id,
     required this.dia,
+    this.diaFin,
     required this.hora,
     this.horaFinalizacion = '',
     required this.puntorecogida,
@@ -25,14 +27,15 @@ class Viaje {
   });
 
   factory Viaje.fromJson(Map<String, dynamic> json) {
-    String _recortar(String? s) =>
+    String recortar(String? s) =>
         s != null && s.length >= 5 ? s.substring(0, 5) : (s ?? '');
 
     return Viaje(
       id: json['id'] as String,
       dia: json['dia'] as String,
-      hora: _recortar(json['hora'] as String?),
-      horaFinalizacion: _recortar(json['horaFinalizacion'] as String?),
+      diaFin: json['diaFin'] as String?,
+      hora: recortar(json['hora'] as String?),
+      horaFinalizacion: recortar(json['horaFinalizacion'] as String?),
       puntorecogida: json['puntorecogida'] as String,
       puntodejada: json['puntodejada'] as String,
       telefonocliente: json['telefonocliente'] as String,
@@ -47,6 +50,7 @@ class Viaje {
 
   Map<String, dynamic> toJson() => {
     'dia': dia,
+    'diaFin': diaFin ?? dia,
     'hora': hora,
     if (horaFinalizacion.isNotEmpty) 'horaFinalizacion': horaFinalizacion,
     'puntorecogida': puntorecogida,
@@ -56,6 +60,7 @@ class Viaje {
 
   Map<String, dynamic> toJsonConCliente(int? clienteId) => {
     'dia': dia,
+    'diaFin': diaFin ?? dia,
     'hora': hora,
     if (horaFinalizacion.isNotEmpty) 'horaFinalizacion': horaFinalizacion,
     'puntorecogida': puntorecogida,
@@ -63,4 +68,10 @@ class Viaje {
     'telefonocliente': telefonocliente,
     if (clienteId != null) 'cliente': {'id': clienteId},
   };
+
+  DateTime get diaDateTime => DateTime.parse(dia);
+  DateTime get diaFinDateTime => DateTime.parse(diaFin ?? dia);
+
+  bool get cruzaMedianoche =>
+      diaFin != null && diaFin != dia;
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import '../models/conductor.dart';
 import '../models/viaje.dart';
@@ -86,7 +87,7 @@ class ApiClient {
 
     data['hora'] = _formatLocalTime(viaje.hora);
     data['horaFinalizacion'] = _formatLocalTime(viaje.horaFinalizacion);
-
+    debugPrint('BODY enviado: ${jsonEncode(data)}');
     final res = await http.put(
       Uri.parse('$_baseUrl/viajes/$id'),
       headers: getHeaders(),
