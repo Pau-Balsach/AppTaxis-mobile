@@ -7,8 +7,10 @@ import '../models/cliente.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiClient {
-  static String get _baseUrl => dotenv.get('API_BASE_URL', fallback: '');
-  static String get _apiKey  => dotenv.get('API_KEY', fallback: '');
+  static String get _baseUrl =>
+      dotenv.get('API_BASE_URL', fallback: '');
+  static String get _apiKey =>
+      dotenv.get('API_KEY', fallback: '');
 
   static Map<String, String> getHeaders() {
     return {
@@ -20,15 +22,18 @@ class ApiClient {
   // CONDUCTORES
   static Future<List<Conductor>> getConductores() async {
     final res = await http.get(
-        Uri.parse('$_baseUrl/conductores'),
-        headers: getHeaders()
+      Uri.parse('$_baseUrl/conductores'),
+      headers: getHeaders(),
     );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List;
-    return list.map((j) => Conductor.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Conductor.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
-  static Future<void> crearConductor(String nombre, String matricula) async {
+  static Future<void> crearConductor(
+      String nombre, String matricula) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/conductores'),
       headers: getHeaders(),
@@ -39,7 +44,8 @@ class ApiClient {
 
   static Future<void> editarConductor(int id, String nuevoNombre) async {
     final res = await http.put(
-      Uri.parse('$_baseUrl/conductores/$id?nuevoNombre=${Uri.encodeComponent(nuevoNombre)}'),
+      Uri.parse(
+          '$_baseUrl/conductores/$id?nuevoNombre=${Uri.encodeComponent(nuevoNombre)}'),
       headers: getHeaders(),
     );
     _checkStatus(res);
@@ -47,30 +53,42 @@ class ApiClient {
 
   static Future<void> eliminarConductor(int id) async {
     final res = await http.delete(
-        Uri.parse('$_baseUrl/conductores/$id'), headers: getHeaders());
+      Uri.parse('$_baseUrl/conductores/$id'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
   }
 
   // VIAJES
   static Future<List<Viaje>> getViajes() async {
-    final res = await http.get(Uri.parse('$_baseUrl/viajes'), headers: getHeaders());
+    final res = await http.get(
+      Uri.parse('$_baseUrl/viajes'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List;
-    return list.map((j) => Viaje.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Viaje.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<List<Viaje>> getViajesConductor(int conductorId) async {
     final res = await http.get(
-        Uri.parse('$_baseUrl/viajes/conductor/$conductorId'), headers: getHeaders());
+      Uri.parse('$_baseUrl/viajes/conductor/$conductorId'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List;
-    return list.map((j) => Viaje.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Viaje.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<List<Viaje>> getViajesPorConductor(int conductorId) =>
       getViajesConductor(conductorId);
 
-  static Future<void> crearViaje(int conductorId, Viaje viaje, {int? clienteId}) async {
+  static Future<void> crearViaje(int conductorId, Viaje viaje,
+      {int? clienteId}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/viajes/conductor/$conductorId'),
       headers: getHeaders(),
@@ -79,15 +97,20 @@ class ApiClient {
     _checkStatus(res);
   }
 
-  static Future<void> editarViaje(String id, Viaje viaje, {int? clienteId, int? conductorId}) async {
+  static Future<void> editarViaje(String id, Viaje viaje,
+      {int? clienteId, int? conductorId}) async {
     final Map<String, dynamic> data = viaje.toJson();
-    if (clienteId != null) data['cliente'] = {'id': clienteId};
-    else data['cliente'] = null;
+    if (clienteId != null) {
+      data['cliente'] = {'id': clienteId};
+    } else {
+      data['cliente'] = null;
+    }
     if (conductorId != null) data['conductor'] = {'id': conductorId};
 
     data['hora'] = _formatLocalTime(viaje.hora);
     data['horaFinalizacion'] = _formatLocalTime(viaje.horaFinalizacion);
     debugPrint('BODY enviado: ${jsonEncode(data)}');
+
     final res = await http.put(
       Uri.parse('$_baseUrl/viajes/$id'),
       headers: getHeaders(),
@@ -103,30 +126,40 @@ class ApiClient {
 
   static Future<void> eliminarViaje(String id) async {
     final res = await http.delete(
-        Uri.parse('$_baseUrl/viajes/$id'), headers: getHeaders());
+      Uri.parse('$_baseUrl/viajes/$id'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
   }
 
   // CLIENTES
   static Future<List<Cliente>> getClientes({String? q}) async {
     final uri = q != null && q.isNotEmpty
-        ? Uri.parse('$_baseUrl/clientes?q=${Uri.encodeComponent(q)}')
+        ? Uri.parse(
+        '$_baseUrl/clientes?q=${Uri.encodeComponent(q)}')
         : Uri.parse('$_baseUrl/clientes');
     final res = await http.get(uri, headers: getHeaders());
     _checkStatus(res);
     final list = jsonDecode(res.body) as List;
-    return list.map((j) => Cliente.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Cliente.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<List<Viaje>> getViajesCliente(int clienteId) async {
     final res = await http.get(
-        Uri.parse('$_baseUrl/clientes/$clienteId/viajes'), headers: getHeaders());
+      Uri.parse('$_baseUrl/clientes/$clienteId/viajes'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List;
-    return list.map((j) => Viaje.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Viaje.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
-  static Future<Cliente> crearCliente(String nombre, String telefono, {String? email, String? notas}) async {
+  static Future<Cliente> crearCliente(String nombre, String telefono,
+      {String? email, String? notas}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/clientes'),
       headers: getHeaders(),
@@ -138,10 +171,15 @@ class ApiClient {
       }),
     );
     _checkStatus(res);
-    return Cliente.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return Cliente.fromJson(
+        jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<Cliente> editarCliente(int id, {String? nombre, String? telefono, String? email, String? notas}) async {
+  static Future<Cliente> editarCliente(int id,
+      {String? nombre,
+        String? telefono,
+        String? email,
+        String? notas}) async {
     final res = await http.put(
       Uri.parse('$_baseUrl/clientes/$id'),
       headers: getHeaders(),
@@ -153,12 +191,15 @@ class ApiClient {
       }),
     );
     _checkStatus(res);
-    return Cliente.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return Cliente.fromJson(
+        jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   static Future<void> eliminarCliente(int id) async {
     final res = await http.delete(
-        Uri.parse('$_baseUrl/clientes/$id'), headers: getHeaders());
+      Uri.parse('$_baseUrl/clientes/$id'),
+      headers: getHeaders(),
+    );
     _checkStatus(res);
   }
 

@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/admin.dart';
-import '../services/auth_service.dart';
 import 'conductores_screen.dart';
 import 'calendario_screen.dart';
 import 'clientes_screen.dart';
-import 'login_screen.dart';
 
 class MenuScreen extends StatelessWidget {
-  final Admin admin;
-  const MenuScreen({super.key, required this.admin});
+  const MenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,39 +13,21 @@ class MenuScreen extends StatelessWidget {
         title: const Text('AppTaxis'),
         backgroundColor: Colors.amber,
         foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
-            onPressed: () async {
-              await AuthService().cerrarSesion();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (_) => false,
-                );
-              }
-            },
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Bienvenido,',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey)),
-            Text(admin.email,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
             _MenuCard(
               icono: Icons.people_alt_outlined,
               titulo: 'Conductores',
               subtitulo: 'Gestiona tu flota de conductores',
               color: Colors.blue,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ConductoresScreen(admin: admin)),
+                MaterialPageRoute(
+                    builder: (_) => const ConductoresScreen()),
               ),
             ),
             const SizedBox(height: 16),
@@ -59,7 +37,8 @@ class MenuScreen extends StatelessWidget {
               subtitulo: 'Gestiona clientes y consulta su historial',
               color: Colors.green,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ClientesScreen(admin: admin)),
+                MaterialPageRoute(
+                    builder: (_) => const ClientesScreen()),
               ),
             ),
             const SizedBox(height: 16),
@@ -69,7 +48,8 @@ class MenuScreen extends StatelessWidget {
               subtitulo: 'Visualiza y gestiona los viajes',
               color: Colors.orange,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CalendarioScreen(admin: admin)),
+                MaterialPageRoute(
+                    builder: (_) => const CalendarioScreen()),
               ),
             ),
           ],
@@ -98,7 +78,8 @@ class _MenuCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
@@ -119,9 +100,14 @@ class _MenuCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(titulo,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(subtitulo, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    Text(subtitulo,
+                        style: TextStyle(
+                            color: Colors.grey[600], fontSize: 13)),
                   ],
                 ),
               ),

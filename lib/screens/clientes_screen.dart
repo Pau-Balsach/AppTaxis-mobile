@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/admin.dart';
 import '../models/cliente.dart';
 import '../models/viaje.dart';
 import '../services/api_client.dart';
 import '../main.dart';
 
 class ClientesScreen extends StatefulWidget {
-  final Admin admin;
-  const ClientesScreen({super.key, required this.admin});
+  const ClientesScreen({super.key});
 
   @override
   State<ClientesScreen> createState() => _ClientesScreenState();
@@ -45,13 +43,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
   }
 
-  // ── AÑADIR ────────────────────────────────────────────────────────────────
-
   Future<void> _anadir() async {
-    final nombreCtrl   = TextEditingController();
+    final nombreCtrl = TextEditingController();
     final telefonoCtrl = TextEditingController();
-    final emailCtrl    = TextEditingController();
-    final notasCtrl    = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final notasCtrl = TextEditingController();
 
     final resultado = await showDialog<bool>(
       context: context,
@@ -64,61 +60,60 @@ class _ClientesScreenState extends State<ClientesScreen> {
               TextField(
                 controller: nombreCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Nombre *',
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: 'Nombre *',
+                    border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: telefonoCtrl,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  labelText: 'Teléfono *',
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: 'Teléfono *',
+                    border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                  labelText: 'Email (opcional)',
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: 'Email (opcional)',
+                    border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: notasCtrl,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'Notas (opcional)',
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: 'Notas (opcional)',
+                    border: OutlineInputBorder()),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Guardar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Guardar')),
         ],
       ),
     );
 
     if (resultado != true || !mounted) return;
 
-    if (nombreCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
+    if (nombreCtrl.text.trim().isEmpty ||
+        telefonoCtrl.text.trim().isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('Nombre y teléfono son obligatorios.')),
+        const SnackBar(
+            content:
+            Text('Nombre y teléfono son obligatorios.')),
       );
-      nombreCtrl.dispose(); telefonoCtrl.dispose();
-      emailCtrl.dispose(); notasCtrl.dispose();
+      nombreCtrl.dispose();
+      telefonoCtrl.dispose();
+      emailCtrl.dispose();
+      notasCtrl.dispose();
       return;
     }
 
@@ -126,30 +121,37 @@ class _ClientesScreenState extends State<ClientesScreen> {
       await ApiClient.crearCliente(
         nombreCtrl.text.trim(),
         telefonoCtrl.text.trim(),
-        email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-        notas: notasCtrl.text.trim().isEmpty ? null : notasCtrl.text.trim(),
+        email: emailCtrl.text.trim().isEmpty
+            ? null
+            : emailCtrl.text.trim(),
+        notas: notasCtrl.text.trim().isEmpty
+            ? null
+            : notasCtrl.text.trim(),
       );
       await _cargar();
       rootScaffoldKey.currentState?.showSnackBar(
-        SnackBar(content: Text('Cliente ${nombreCtrl.text.trim()} creado.')),
+        SnackBar(
+            content:
+            Text('Cliente ${nombreCtrl.text.trim()} creado.')),
       );
     } catch (_) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('Error al crear el cliente.')),
+        const SnackBar(
+            content: Text('Error al crear el cliente.')),
       );
     } finally {
-      nombreCtrl.dispose(); telefonoCtrl.dispose();
-      emailCtrl.dispose(); notasCtrl.dispose();
+      nombreCtrl.dispose();
+      telefonoCtrl.dispose();
+      emailCtrl.dispose();
+      notasCtrl.dispose();
     }
   }
 
-  // ── EDITAR ────────────────────────────────────────────────────────────────
-
   Future<void> _editar(Cliente c) async {
-    final nombreCtrl   = TextEditingController(text: c.nombre);
+    final nombreCtrl = TextEditingController(text: c.nombre);
     final telefonoCtrl = TextEditingController(text: c.telefono);
-    final emailCtrl    = TextEditingController(text: c.email ?? '');
-    final notasCtrl    = TextEditingController(text: c.notas ?? '');
+    final emailCtrl = TextEditingController(text: c.email ?? '');
+    final notasCtrl = TextEditingController(text: c.notas ?? '');
 
     final resultado = await showDialog<bool>(
       context: context,
@@ -160,51 +162,41 @@ class _ClientesScreenState extends State<ClientesScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: nombreCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+                  controller: nombreCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Nombre',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 12),
               TextField(
-                controller: telefonoCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Teléfono',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+                  controller: telefonoCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                      labelText: 'Teléfono',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 12),
               TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 12),
               TextField(
-                controller: notasCtrl,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Notas',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+                  controller: notasCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                      labelText: 'Notas',
+                      border: OutlineInputBorder())),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Guardar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Guardar')),
         ],
       ),
     );
@@ -214,10 +206,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
     try {
       await ApiClient.editarCliente(
         c.id,
-        nombre:   nombreCtrl.text.trim().isEmpty   ? null : nombreCtrl.text.trim(),
-        telefono: telefonoCtrl.text.trim().isEmpty ? null : telefonoCtrl.text.trim(),
-        email:    emailCtrl.text.trim().isEmpty    ? null : emailCtrl.text.trim(),
-        notas:    notasCtrl.text.trim().isEmpty    ? null : notasCtrl.text.trim(),
+        nombre: nombreCtrl.text.trim().isEmpty
+            ? null
+            : nombreCtrl.text.trim(),
+        telefono: telefonoCtrl.text.trim().isEmpty
+            ? null
+            : telefonoCtrl.text.trim(),
+        email: emailCtrl.text.trim().isEmpty
+            ? null
+            : emailCtrl.text.trim(),
+        notas: notasCtrl.text.trim().isEmpty
+            ? null
+            : notasCtrl.text.trim(),
       );
       await _cargar();
       rootScaffoldKey.currentState?.showSnackBar(
@@ -225,31 +225,34 @@ class _ClientesScreenState extends State<ClientesScreen> {
       );
     } catch (_) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('Error al editar el cliente.')),
+        const SnackBar(
+            content: Text('Error al editar el cliente.')),
       );
     } finally {
-      nombreCtrl.dispose(); telefonoCtrl.dispose();
-      emailCtrl.dispose(); notasCtrl.dispose();
+      nombreCtrl.dispose();
+      telefonoCtrl.dispose();
+      emailCtrl.dispose();
+      notasCtrl.dispose();
     }
   }
-
-  // ── ELIMINAR ──────────────────────────────────────────────────────────────
 
   Future<void> _eliminar(Cliente c) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar cliente'),
-        content: Text('¿Eliminar a ${c.nombre}? Sus viajes quedarán sin cliente asignado.'),
+        content: Text(
+            '¿Eliminar a ${c.nombre}? Sus viajes quedarán sin cliente asignado.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            child: const Text('Eliminar',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -265,20 +268,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
       );
     } catch (_) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('Error al eliminar el cliente.')),
+        const SnackBar(
+            content: Text('Error al eliminar el cliente.')),
       );
     }
   }
 
-  // ── HISTORIAL ─────────────────────────────────────────────────────────────
-
   Future<void> _verHistorial(Cliente c) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => _HistorialScreen(cliente: c)),
+      MaterialPageRoute(
+          builder: (_) => _HistorialScreen(cliente: c)),
     );
   }
-
-  // ── BUILD ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +289,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
         backgroundColor: Colors.amber,
         foregroundColor: Colors.black,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () => _cargar()),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _cargar()),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -316,10 +319,13 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   },
                 )
                     : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
               ),
-              onChanged: (v) => _cargar(q: v.isEmpty ? null : v),
+              onChanged: (v) =>
+                  _cargar(q: v.isEmpty ? null : v),
             ),
           ),
           Expanded(
@@ -327,53 +333,75 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _clientes.isEmpty
                 ? const Center(
-              child: Text('No hay clientes.', style: TextStyle(color: Colors.grey)),
-            )
+                child: Text('No hay clientes.',
+                    style:
+                    TextStyle(color: Colors.grey)))
                 : RefreshIndicator(
               onRefresh: _cargar,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
+                padding: const EdgeInsets.fromLTRB(
+                    12, 0, 12, 80),
                 itemCount: _clientes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, __) =>
+                const SizedBox(height: 8),
                 itemBuilder: (_, i) {
                   final c = _clientes[i];
                   return Card(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius:
+                        BorderRadius.circular(12)),
                     child: ListTile(
                       onTap: () => _verHistorial(c),
                       leading: CircleAvatar(
-                        backgroundColor: Colors.green.shade100,
+                        backgroundColor:
+                        Colors.green.shade100,
                         child: Text(
-                          c.nombre.isNotEmpty ? c.nombre[0].toUpperCase() : '?',
+                          c.nombre.isNotEmpty
+                              ? c.nombre[0]
+                              .toUpperCase()
+                              : '?',
                           style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.bold),
+                              color:
+                              Colors.green.shade700,
+                              fontWeight:
+                              FontWeight.bold),
                         ),
                       ),
                       title: Text(c.nombre,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                          style: const TextStyle(
+                              fontWeight:
+                              FontWeight.w600)),
                       subtitle: Text(
-                        c.telefono + (c.email != null ? '\n${c.email}' : ''),
+                        c.telefono +
+                            (c.email != null
+                                ? '\n${c.email}'
+                                : ''),
                       ),
                       isThreeLine: c.email != null,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.history, color: Colors.blue),
+                            icon: const Icon(
+                                Icons.history,
+                                color: Colors.blue),
                             tooltip: 'Historial',
-                            onPressed: () => _verHistorial(c),
+                            onPressed: () =>
+                                _verHistorial(c),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.edit_outlined,
+                            icon: const Icon(
+                                Icons.edit_outlined,
                                 color: Colors.orange),
-                            onPressed: () => _editar(c),
+                            onPressed: () =>
+                                _editar(c),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline,
+                            icon: const Icon(
+                                Icons.delete_outline,
                                 color: Colors.red),
-                            onPressed: () => _eliminar(c),
+                            onPressed: () =>
+                                _eliminar(c),
                           ),
                         ],
                       ),
@@ -412,7 +440,8 @@ class _HistorialScreenState extends State<_HistorialScreen> {
   Future<void> _cargar() async {
     setState(() => _cargando = true);
     try {
-      final lista = await ApiClient.getViajesCliente(widget.cliente.id);
+      final lista =
+      await ApiClient.getViajesCliente(widget.cliente.id);
       setState(() => _viajes = lista);
     } catch (_) {
       setState(() => _viajes = []);
@@ -431,7 +460,6 @@ class _HistorialScreenState extends State<_HistorialScreen> {
       ),
       body: Column(
         children: [
-          // Info del cliente
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(12),
@@ -445,7 +473,8 @@ class _HistorialScreenState extends State<_HistorialScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Icon(Icons.phone, size: 16, color: Colors.green.shade700),
+                  Icon(Icons.phone,
+                      size: 16, color: Colors.green.shade700),
                   const SizedBox(width: 6),
                   Text(widget.cliente.telefono,
                       style: const TextStyle(fontSize: 14)),
@@ -453,15 +482,18 @@ class _HistorialScreenState extends State<_HistorialScreen> {
                 if (widget.cliente.email != null) ...[
                   const SizedBox(height: 4),
                   Row(children: [
-                    Icon(Icons.email_outlined, size: 16, color: Colors.green.shade700),
+                    Icon(Icons.email_outlined,
+                        size: 16, color: Colors.green.shade700),
                     const SizedBox(width: 6),
-                    Text(widget.cliente.email!, style: const TextStyle(fontSize: 14)),
+                    Text(widget.cliente.email!,
+                        style: const TextStyle(fontSize: 14)),
                   ]),
                 ],
                 if (widget.cliente.notas != null) ...[
                   const SizedBox(height: 4),
                   Row(children: [
-                    Icon(Icons.notes, size: 16, color: Colors.green.shade700),
+                    Icon(Icons.notes,
+                        size: 16, color: Colors.green.shade700),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(widget.cliente.notas!,
@@ -472,12 +504,13 @@ class _HistorialScreenState extends State<_HistorialScreen> {
               ],
             ),
           ),
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                const Icon(Icons.history, size: 18, color: Colors.grey),
+                const Icon(Icons.history,
+                    size: 18, color: Colors.grey),
                 const SizedBox(width: 6),
                 Text('Historial de viajes',
                     style: TextStyle(
@@ -485,50 +518,60 @@ class _HistorialScreenState extends State<_HistorialScreen> {
                         fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Text('${_viajes.length} viajes',
-                    style:
-                    TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                    style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13)),
               ],
             ),
           ),
-
           Expanded(
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
                 : _viajes.isEmpty
                 ? const Center(
                 child: Text('Sin viajes registrados.',
-                    style: TextStyle(color: Colors.grey)))
+                    style:
+                    TextStyle(color: Colors.grey)))
                 : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: _viajes.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) =>
+              const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final v = _viajes[i];
-                final fecha = DateFormat('dd/MM/yyyy')
-                    .format(DateTime.parse(v.dia));
+                final fecha =
+                DateFormat('dd/MM/yyyy').format(
+                    DateTime.parse(v.dia));
                 return Card(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius:
+                      BorderRadius.circular(12)),
                   child: ListTile(
                     leading: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding:
+                      const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.amber.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius:
+                        BorderRadius.circular(8),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(v.hora,
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber.shade800,
+                                  fontWeight:
+                                  FontWeight.bold,
+                                  color: Colors
+                                      .amber.shade800,
                                   fontSize: 13)),
                           Text(fecha,
                               style: TextStyle(
                                   fontSize: 10,
-                                  color: Colors.amber.shade700)),
+                                  color: Colors
+                                      .amber.shade700)),
                         ],
                       ),
                     ),
@@ -541,7 +584,8 @@ class _HistorialScreenState extends State<_HistorialScreen> {
                     subtitle: v.conductor != null
                         ? Text(
                         '${v.conductor!.nombre} · ${v.conductor!.matricula}',
-                        style: const TextStyle(fontSize: 12))
+                        style: const TextStyle(
+                            fontSize: 12))
                         : null,
                   ),
                 );
