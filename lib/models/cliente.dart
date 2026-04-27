@@ -4,6 +4,7 @@ class Cliente {
   final String telefono;
   final String? email;
   final String? notas;
+  final String? adminId;
 
   Cliente({
     required this.id,
@@ -11,6 +12,7 @@ class Cliente {
     required this.telefono,
     this.email,
     this.notas,
+    this.adminId,
   });
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
@@ -20,13 +22,16 @@ class Cliente {
       telefono: json['telefono'] as String,
       email: json['email'] as String?,
       notas: json['notas'] as String?,
+      adminId: json['adminId'] as String? ?? json['admin_id'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'nombre': nombre,
     'telefono': telefono,
     if (email != null) 'email': email,
     if (notas != null) 'notas': notas,
+    if (adminId != null) 'adminId': adminId,
   };
 }

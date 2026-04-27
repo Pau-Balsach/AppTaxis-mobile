@@ -6,6 +6,7 @@ import '../models/conductor.dart';
 import '../models/viaje.dart';
 import '../models/cliente.dart';
 import '../services/api_client.dart';
+import '../services/app_exception.dart';
 
 const List<Color> _conductorColors = [
   Color(0xFF1565C0),
@@ -18,10 +19,9 @@ const List<Color> _conductorColors = [
   Color(0xFF558B2F),
 ];
 
-Color _colorParaConductor(int conductorId, List<Conductor> conductores) {
-  final idx = conductores.indexWhere((c) => c.id == conductorId);
-  if (idx < 0) return Colors.grey;
-  return _conductorColors[idx % _conductorColors.length];
+String _uiErrorMessage(Object e, {required String fallback}) {
+  if (e is AppException) return e.message;
+  return fallback;
 }
 
 class CalendarioScreen extends StatefulWidget {
@@ -38,9 +38,15 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   List<Viaje> _viajesDelMes = [];
   List<Conductor> _conductores = [];
   List<Cliente> _clientes = [];
+  Map<int, Color> _conductorColorMap = {};
 
   Conductor? _conductorFiltro;
   bool _cargando = true;
+
+  String _errorToMessage(Object e, {required String fallback}) {
+    if (e is AppException) return e.message;
+    return fallback;
+  }
 
   @override
   void initState() {
@@ -61,8 +67,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       final clientes = results[1] as List<Cliente>;
 
       if (_conductorFiltro != null) {
-        viajes = await ApiClient.getViajesPorConductor(
-            _conductorFiltro!.id);
+        viajes = await ApiClient.getViajesPorConductor(_conductorFiltro!.id);
       } else {
         viajes = await ApiClient.getViajes();
       }
@@ -72,16 +77,23 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           _conductores = conds;
           _clientes = clientes;
           _viajesDelMes = viajes;
+          _conductorColorMap = {
+            for (var i = 0; i < conds.length; i++) conds[i].id: _conductorColors[i % _conductorColors.length],
+          };
           if (_conductorFiltro != null) {
-            _conductorFiltro = conds.firstWhere(
+            _conductorFiltro = conds.isNotEmpty
+                ? conds.firstWhere(
                   (c) => c.id == _conductorFiltro!.id,
               orElse: () => conds.first,
-            );
+            )
+                : null;
           }
         });
       }
     } catch (e) {
-      debugPrint('Error cargando datos: $e');
+      rootScaffoldKey.currentState?.showSnackBar(
+        SnackBar(content: Text(_errorToMessage(e, fallback: 'Error cargando datos.'))),
+      );
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -92,21 +104,18 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     return _viajesDelMes.where((v) {
       if (v.dia == diaStr) return true;
       if (v.cruzaMedianoche) {
-        return dia.isAfter(v.diaDateTime) &&
-            !dia.isAfter(v.diaFinDateTime);
+        return dia.isAfter(v.diaDateTime) && !dia.isAfter(v.diaFinDateTime);
       }
       return false;
     }).toList();
   }
 
   List<Viaje> get _viajesDia {
-    final diaStr =
-    DateFormat('yyyy-MM-dd').format(_diaSeleccionado);
+    final diaStr = DateFormat('yyyy-MM-dd').format(_diaSeleccionado);
     return _viajesDelMes.where((v) {
       if (v.dia == diaStr) return true;
       if (v.cruzaMedianoche) {
-        return _diaSeleccionado.isAfter(v.diaDateTime) &&
-            !_diaSeleccionado.isAfter(v.diaFinDateTime);
+        return _diaSeleccionado.isAfter(v.diaDateTime) && !_diaSeleccionado.isAfter(v.diaFinDateTime);
       }
       return false;
     }).toList()
@@ -115,14 +124,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
   Color _colorViaje(Viaje v) {
     if (v.conductor == null) return Colors.grey;
-    return _colorParaConductor(v.conductor!.id, _conductores);
+    return _conductorColorMap[v.conductor!.id] ?? Colors.grey;
   }
 
   Future<void> _crearViaje() async {
     if (_conductores.isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('No hay conductores disponibles.')),
+        const SnackBar(content: Text('No hay conductores disponibles.')),
       );
       return;
     }
@@ -160,8 +168,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
     if (result == true) {
       await _cargarTodo();
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Viaje actualizado correctamente.')),
+        const SnackBar(content: Text('Viaje actualizado correctamente.')),
       );
     }
   }
@@ -173,15 +180,11 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         title: const Text('Eliminar viaje'),
         content: Text('¿Eliminar el viaje de las ${v.hora}?'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
           ElevatedButton(
-            style:
-            ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar',
-                style: TextStyle(color: Colors.white)),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -197,8 +200,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       );
     } catch (e) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Error al eliminar el viaje.')),
+        SnackBar(content: Text(_errorToMessage(e, fallback: 'Error al eliminar el viaje.'))),
       );
     }
   }
@@ -210,11 +212,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         title: const Text('Calendario'),
         backgroundColor: Colors.amber,
         foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _cargarTodo)
-        ],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _cargarTodo)],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _crearViaje,
@@ -235,19 +233,15 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               _cargarTodo();
             },
           ),
-          if (_conductores.isNotEmpty)
-            _LeyendaColores(conductores: _conductores),
+          if (_conductores.isNotEmpty) _LeyendaColores(conductores: _conductores),
           TableCalendar<Viaje>(
             firstDay: DateTime(2020),
             lastDay: DateTime(2030),
             focusedDay: _focusMes,
-            selectedDayPredicate: (d) =>
-                isSameDay(d, _diaSeleccionado),
+            selectedDayPredicate: (d) => isSameDay(d, _diaSeleccionado),
             eventLoader: _viajesParaDia,
             calendarStyle: CalendarStyle(
-              selectedDecoration: BoxDecoration(
-                  color: Colors.amber.shade700,
-                  shape: BoxShape.circle),
+              selectedDecoration: BoxDecoration(color: Colors.amber.shade700, shape: BoxShape.circle),
               todayDecoration: BoxDecoration(
                 color: Colors.amber.withOpacity(0.4),
                 shape: BoxShape.circle,
@@ -262,8 +256,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: events.take(4).map((viaje) {
                       return Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 1.5),
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
                         width: 7.0,
                         height: 7.0,
                         decoration: BoxDecoration(
@@ -276,9 +269,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 );
               },
             ),
-            headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true),
+            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
             onDaySelected: (sel, foc) => setState(() {
               _diaSeleccionado = sel;
               _focusMes = foc;
@@ -294,16 +285,13 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 ? Center(
               child: Text(
                 'No hay viajes el ${DateFormat('dd/MM/yyyy').format(_diaSeleccionado)}',
-                style:
-                const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: Colors.grey),
               ),
             )
                 : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                  12, 12, 12, 80),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
               itemCount: _viajesDia.length,
-              separatorBuilder: (_, __) =>
-              const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final v = _viajesDia[i];
                 return _TarjetaViaje(
@@ -337,8 +325,7 @@ class _DialogoCrearViaje extends StatefulWidget {
   });
 
   @override
-  State<_DialogoCrearViaje> createState() =>
-      _DialogoCrearViajeState();
+  State<_DialogoCrearViaje> createState() => _DialogoCrearViajeState();
 }
 
 class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
@@ -356,8 +343,7 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
   @override
   void initState() {
     super.initState();
-    conductorSel =
-        widget.conductorFiltro ?? widget.conductores.first;
+    conductorSel = widget.conductorFiltro ?? widget.conductores.first;
     diaFinSel = widget.diaSeleccionado;
     horaSel = TimeOfDay.now();
     horaFinSel = TimeOfDay.now();
@@ -371,29 +357,21 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
     super.dispose();
   }
 
-  String _formatHora(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  String _formatHora(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-          'Nuevo viaje — ${DateFormat('dd/MM/yyyy').format(widget.diaSeleccionado)}'),
+      title: Text('Nuevo viaje — ${DateFormat('dd/MM/yyyy').format(widget.diaSeleccionado)}'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<Conductor>(
               value: conductorSel,
-              decoration: const InputDecoration(
-                  labelText: 'Conductor',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
-                  .map((c) => DropdownMenuItem(
-                value: c,
-                child:
-                Text('${c.nombre} — ${c.matricula}'),
-              ))
+                  .map((c) => DropdownMenuItem(value: c, child: Text('${c.nombre} — ${c.matricula}')))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => conductorSel = v);
@@ -414,62 +392,52 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.access_time),
-              title:
-              Text('Hora inicio: ${horaSel.format(context)}'),
+              title: Text('Hora inicio: ${horaSel.format(context)}'),
               subtitle: Text(
-                DateFormat('dd/MM/yyyy')
-                    .format(widget.diaSeleccionado),
+                DateFormat('dd/MM/yyyy').format(widget.diaSeleccionado),
                 style: const TextStyle(fontSize: 12),
               ),
               onTap: () async {
-                final t = await showTimePicker(
-                    context: context, initialTime: horaSel);
+                final t = await showTimePicker(context: context, initialTime: horaSel);
                 if (t != null) setState(() => horaSel = t);
               },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.flag),
-              title:
-              Text('Hora fin: ${horaFinSel.format(context)}'),
+              title: Text('Hora fin: ${horaFinSel.format(context)}'),
               subtitle: Row(
                 children: [
                   Text(
                     DateFormat('dd/MM/yyyy').format(diaFinSel),
                     style: TextStyle(
                       fontSize: 12,
-                      color: diaFinSel
-                          .isAfter(widget.diaSeleccionado)
-                          ? Colors.orange.shade700
-                          : null,
+                      color: diaFinSel.isAfter(widget.diaSeleccionado) ? Colors.orange.shade700 : null,
                     ),
                   ),
                   if (diaFinSel.isAfter(widget.diaSeleccionado))
                     Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
                           color: Colors.orange.shade100,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('cruza medianoche',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.orange.shade800)),
+                        child: Text(
+                          'cruza medianoche',
+                          style: TextStyle(fontSize: 10, color: Colors.orange.shade800),
+                        ),
                       ),
                     ),
                 ],
               ),
               onTap: () async {
-                final t = await showTimePicker(
-                    context: context, initialTime: horaFinSel);
+                final t = await showTimePicker(context: context, initialTime: horaFinSel);
                 if (t == null) return;
                 setState(() => horaFinSel = t);
 
-                final inicioMin =
-                    horaSel.hour * 60 + horaSel.minute;
+                final inicioMin = horaSel.hour * 60 + horaSel.minute;
                 final finMin = t.hour * 60 + t.minute;
                 if (finMin < inicioMin) {
                   final diaSig = await showDialog<bool>(
@@ -477,44 +445,31 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
                     builder: (c) => AlertDialog(
                       title: const Text('¿Día siguiente?'),
                       content: const Text(
-                          'La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?'),
+                        'La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?',
+                      ),
                       actions: [
-                        TextButton(
-                            onPressed: () =>
-                                Navigator.pop(c, false),
-                            child: const Text('No, mismo día')),
-                        ElevatedButton(
-                            onPressed: () =>
-                                Navigator.pop(c, true),
-                            child:
-                            const Text('Sí, día siguiente')),
+                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No, mismo día')),
+                        ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sí, día siguiente')),
                       ],
                     ),
                   );
                   if (diaSig == true) {
-                    setState(() => diaFinSel = widget
-                        .diaSeleccionado
-                        .add(const Duration(days: 1)));
+                    setState(() => diaFinSel = widget.diaSeleccionado.add(const Duration(days: 1)));
                   }
                 } else {
-                  setState(
-                          () => diaFinSel = widget.diaSeleccionado);
+                  setState(() => diaFinSel = widget.diaSeleccionado);
                 }
               },
             ),
             const SizedBox(height: 8),
             TextField(
               controller: recogidaCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Punto de recogida',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: dejadaCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Punto de dejada',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -523,29 +478,19 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
               decoration: InputDecoration(
                 labelText: 'Teléfono cliente',
                 border: const OutlineInputBorder(),
-                helperText: clienteSel != null
-                    ? 'Autocompletado desde cliente'
-                    : null,
-                suffixIcon: clienteSel != null
-                    ? Icon(Icons.person,
-                    color: Colors.green.shade600, size: 18)
-                    : null,
+                helperText: clienteSel != null ? 'Autocompletado desde cliente' : null,
+                suffixIcon: clienteSel != null ? Icon(Icons.person, color: Colors.green.shade600, size: 18) : null,
               ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
         ElevatedButton(
           onPressed: _guardando ? null : _guardar,
           child: _guardando
-              ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Guardar'),
         ),
       ],
@@ -553,12 +498,9 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
   }
 
   Future<void> _guardar() async {
-    if (recogidaCtrl.text.trim().isEmpty ||
-        dejadaCtrl.text.trim().isEmpty ||
-        telefonoCtrl.text.trim().isEmpty) {
+    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Rellena todos los campos.')),
+        const SnackBar(content: Text('Rellena todos los campos.')),
       );
       return;
     }
@@ -584,10 +526,9 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(() => _guardando = false);
+      if (mounted) setState(() => _guardando = false);
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Error al guardar el viaje.')),
+        SnackBar(content: Text(_uiErrorMessage(e, fallback: 'Error al guardar el viaje.'))),
       );
     }
   }
@@ -605,8 +546,7 @@ class _DialogoEditarViaje extends StatefulWidget {
   });
 
   @override
-  State<_DialogoEditarViaje> createState() =>
-      _DialogoEditarViajeState();
+  State<_DialogoEditarViaje> createState() => _DialogoEditarViajeState();
 }
 
 class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
@@ -630,35 +570,29 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
     );
   }
 
-  String _formatHora(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  String _formatHora(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   @override
   void initState() {
     super.initState();
     final v = widget.viaje;
 
-    conductorSel = widget.conductores.firstWhere(
-            (c) => c.id == v.conductor?.id,
-        orElse: () => widget.conductores.first);
+    conductorSel =
+        widget.conductores.firstWhere((c) => c.id == v.conductor?.id, orElse: () => widget.conductores.first);
 
     clienteSel = v.cliente != null
-        ? widget.clientes.firstWhere(
-            (c) => c.id == v.cliente!.id,
-        orElse: () => widget.clientes.first)
+        ? widget.clientes.firstWhere((c) => c.id == v.cliente!.id, orElse: () => widget.clientes.first)
         : null;
 
     diaInicio = DateTime.parse(v.dia);
-    diaFinSel =
-    v.diaFin != null ? DateTime.parse(v.diaFin!) : diaInicio;
+    diaFinSel = v.diaFin != null ? DateTime.parse(v.diaFin!) : diaInicio;
 
     horaSel = _parseHora(v.hora);
     horaFinSel = _parseHora(v.horaFinalizacion);
 
     recogidaCtrl = TextEditingController(text: v.puntorecogida);
     dejadaCtrl = TextEditingController(text: v.puntodejada);
-    telefonoCtrl =
-        TextEditingController(text: v.telefonocliente);
+    telefonoCtrl = TextEditingController(text: v.telefonocliente);
   }
 
   @override
@@ -679,19 +613,12 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
           children: [
             DropdownButtonFormField<Conductor>(
               value: conductorSel,
-              decoration: const InputDecoration(
-                  labelText: 'Conductor',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
-                  .map((c) => DropdownMenuItem(
-                value: c,
-                child:
-                Text('${c.nombre} — ${c.matricula}'),
-              ))
+                  .map((c) => DropdownMenuItem(value: c, child: Text('${c.nombre} — ${c.matricula}')))
                   .toList(),
               onChanged: (val) {
-                if (val != null)
-                  setState(() => conductorSel = val);
+                if (val != null) setState(() => conductorSel = val);
               },
             ),
             const SizedBox(height: 12),
@@ -709,60 +636,49 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.access_time),
-              title:
-              Text('Hora inicio: ${horaSel.format(context)}'),
+              title: Text('Hora inicio: ${horaSel.format(context)}'),
               subtitle: Text(
                 DateFormat('dd/MM/yyyy').format(diaInicio),
                 style: const TextStyle(fontSize: 12),
               ),
               onTap: () async {
-                final t = await showTimePicker(
-                    context: context, initialTime: horaSel);
+                final t = await showTimePicker(context: context, initialTime: horaSel);
                 if (t != null) setState(() => horaSel = t);
               },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.flag),
-              title:
-              Text('Hora fin: ${horaFinSel.format(context)}'),
+              title: Text('Hora fin: ${horaFinSel.format(context)}'),
               subtitle: Row(
                 children: [
                   Text(
                     DateFormat('dd/MM/yyyy').format(diaFinSel),
                     style: TextStyle(
                       fontSize: 12,
-                      color: diaFinSel.isAfter(diaInicio)
-                          ? Colors.orange.shade700
-                          : null,
+                      color: diaFinSel.isAfter(diaInicio) ? Colors.orange.shade700 : null,
                     ),
                   ),
                   if (diaFinSel.isAfter(diaInicio))
                     Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
                           color: Colors.orange.shade100,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('cruza medianoche',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.orange.shade800)),
+                        child: Text('cruza medianoche', style: TextStyle(fontSize: 10, color: Colors.orange.shade800)),
                       ),
                     ),
                 ],
               ),
               onTap: () async {
-                final t = await showTimePicker(
-                    context: context, initialTime: horaFinSel);
+                final t = await showTimePicker(context: context, initialTime: horaFinSel);
                 if (t == null) return;
                 setState(() => horaFinSel = t);
 
-                final inicioMin =
-                    horaSel.hour * 60 + horaSel.minute;
+                final inicioMin = horaSel.hour * 60 + horaSel.minute;
                 final finMin = t.hour * 60 + t.minute;
                 if (finMin < inicioMin) {
                   final diaSig = await showDialog<bool>(
@@ -770,23 +686,16 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
                     builder: (c) => AlertDialog(
                       title: const Text('¿Día siguiente?'),
                       content: const Text(
-                          'La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?'),
+                        'La hora de fin es anterior a la de inicio. ¿El viaje termina al día siguiente?',
+                      ),
                       actions: [
-                        TextButton(
-                            onPressed: () =>
-                                Navigator.pop(c, false),
-                            child: const Text('No, mismo día')),
-                        ElevatedButton(
-                            onPressed: () =>
-                                Navigator.pop(c, true),
-                            child:
-                            const Text('Sí, día siguiente')),
+                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No, mismo día')),
+                        ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sí, día siguiente')),
                       ],
                     ),
                   );
                   if (diaSig == true) {
-                    setState(() => diaFinSel =
-                        diaInicio.add(const Duration(days: 1)));
+                    setState(() => diaFinSel = diaInicio.add(const Duration(days: 1)));
                   } else {
                     setState(() => diaFinSel = diaInicio);
                   }
@@ -798,16 +707,12 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
             const SizedBox(height: 8),
             TextField(
               controller: recogidaCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Punto de recogida',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: dejadaCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Punto de dejada',
-                  border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -816,29 +721,19 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
               decoration: InputDecoration(
                 labelText: 'Teléfono cliente',
                 border: const OutlineInputBorder(),
-                helperText: clienteSel != null
-                    ? 'Autocompletado desde cliente'
-                    : null,
-                suffixIcon: clienteSel != null
-                    ? Icon(Icons.person,
-                    color: Colors.green.shade600, size: 18)
-                    : null,
+                helperText: clienteSel != null ? 'Autocompletado desde cliente' : null,
+                suffixIcon: clienteSel != null ? Icon(Icons.person, color: Colors.green.shade600, size: 18) : null,
               ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
         ElevatedButton(
           onPressed: _guardando ? null : _actualizar,
           child: _guardando
-              ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Actualizar'),
         ),
       ],
@@ -846,12 +741,9 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
   }
 
   Future<void> _actualizar() async {
-    if (recogidaCtrl.text.trim().isEmpty ||
-        dejadaCtrl.text.trim().isEmpty ||
-        telefonoCtrl.text.trim().isEmpty) {
+    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Rellena todos los campos.')),
+        const SnackBar(content: Text('Rellena todos los campos.')),
       );
       return;
     }
@@ -880,10 +772,9 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(() => _guardando = false);
+      if (mounted) setState(() => _guardando = false);
       rootScaffoldKey.currentState?.showSnackBar(
-        const SnackBar(
-            content: Text('Error al actualizar el viaje.')),
+        SnackBar(content: Text(_uiErrorMessage(e, fallback: 'Error al actualizar el viaje.'))),
       );
     }
   }
@@ -927,9 +818,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
       _filtrados = q.isEmpty
           ? widget.clientes
           : widget.clientes
-          .where((c) =>
-      c.nombre.toLowerCase().contains(q.toLowerCase()) ||
-          c.telefono.contains(q))
+          .where((c) => c.nombre.toLowerCase().contains(q.toLowerCase()) || c.telefono.contains(q))
           .toList();
     });
   }
@@ -962,8 +851,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
         if (widget.seleccionado != null)
           Container(
             margin: const EdgeInsets.only(top: 6),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -971,22 +859,18 @@ class _SelectorClienteState extends State<_SelectorCliente> {
             ),
             child: Row(
               children: [
-                Icon(Icons.person,
-                    size: 16, color: Colors.green.shade700),
+                Icon(Icons.person, size: 16, color: Colors.green.shade700),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${widget.seleccionado!.nombre} · ${widget.seleccionado!.telefono}',
-                    style: TextStyle(
-                        color: Colors.green.shade800,
-                        fontWeight: FontWeight.w500),
+                    style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
             ),
           ),
-        if (_busquedaCtrl.text.isNotEmpty &&
-            widget.seleccionado == null)
+        if (_busquedaCtrl.text.isNotEmpty && widget.seleccionado == null)
           Container(
             margin: const EdgeInsets.only(top: 4),
             constraints: const BoxConstraints(maxHeight: 160),
@@ -997,8 +881,7 @@ class _SelectorClienteState extends State<_SelectorCliente> {
             child: _filtrados.isEmpty
                 ? const Padding(
               padding: EdgeInsets.all(12),
-              child: Text('Sin resultados',
-                  style: TextStyle(color: Colors.grey)),
+              child: Text('Sin resultados', style: TextStyle(color: Colors.grey)),
             )
                 : SingleChildScrollView(
               child: Column(
@@ -1008,28 +891,21 @@ class _SelectorClienteState extends State<_SelectorCliente> {
                   dense: true,
                   leading: CircleAvatar(
                     radius: 14,
-                    backgroundColor:
-                    Colors.green.shade100,
+                    backgroundColor: Colors.green.shade100,
                     child: Text(
                       c.nombre[0].toUpperCase(),
                       style: TextStyle(
-                          color:
-                          Colors.green.shade700,
-                          fontSize: 12,
-                          fontWeight:
-                          FontWeight.bold),
+                        color: Colors.green.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  title: Text(c.nombre,
-                      style: const TextStyle(
-                          fontSize: 14)),
-                  subtitle: Text(c.telefono,
-                      style: const TextStyle(
-                          fontSize: 12)),
+                  title: Text(c.nombre, style: const TextStyle(fontSize: 14)),
+                  subtitle: Text(c.telefono, style: const TextStyle(fontSize: 12)),
                   onTap: () {
                     _busquedaCtrl.clear();
-                    setState(() => _filtrados =
-                        widget.clientes);
+                    setState(() => _filtrados = widget.clientes);
                     widget.onChanged(c);
                   },
                 ))
@@ -1065,8 +941,7 @@ class _FiltroCondutor extends StatelessWidget {
           labelText: 'Filtrar por conductor',
           prefixIcon: Icon(Icons.person_search),
           border: OutlineInputBorder(),
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           isDense: true,
         ),
         items: [
@@ -1080,9 +955,7 @@ class _FiltroCondutor extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 8,
-                  backgroundColor: _conductorColors[
-                  conductores.indexOf(c) %
-                      _conductorColors.length],
+                  backgroundColor: _conductorColors[conductores.indexOf(c) % _conductorColors.length],
                 ),
                 const SizedBox(width: 8),
                 Text('${c.nombre} (${c.matricula})'),
@@ -1105,26 +978,22 @@ class _LeyendaColores extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Wrap(
         spacing: 8,
         runSpacing: 4,
         children: conductores.asMap().entries.map((e) {
-          final color =
-          _conductorColors[e.key % _conductorColors.length];
+          final color = _conductorColors[e.key % _conductorColors.length];
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                      color: color, shape: BoxShape.circle)),
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 4),
-              Text(e.value.nombre,
-                  style: const TextStyle(
-                      fontSize: 11, color: Colors.black87)),
+              Text(e.value.nombre, style: const TextStyle(fontSize: 11, color: Colors.black87)),
             ],
           );
         }).toList(),
@@ -1151,10 +1020,7 @@ class _TarjetaViaje extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cruzaMedianoche = viaje.cruzaMedianoche;
-    final diaFinStr = viaje.diaFin != null
-        ? DateFormat('dd/MM')
-        .format(DateTime.parse(viaje.diaFin!))
-        : null;
+    final diaFinStr = viaje.diaFin != null ? DateFormat('dd/MM').format(DateTime.parse(viaje.diaFin!)) : null;
 
     return Card(
       elevation: 0,
@@ -1168,17 +1034,14 @@ class _TarjetaViaje extends StatelessWidget {
           border: Border(left: BorderSide(color: color, width: 7)),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              vertical: 10.0, horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 4.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -1186,10 +1049,7 @@ class _TarjetaViaje extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(viaje.hora,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: color)),
+                      Text(viaje.hora, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
                       if (viaje.horaFinalizacion.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Row(
@@ -1197,19 +1057,16 @@ class _TarjetaViaje extends StatelessWidget {
                           children: [
                             Text(
                               viaje.horaFinalizacion,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: color.withOpacity(0.8)),
+                              style: TextStyle(fontSize: 11, color: color.withOpacity(0.8)),
                             ),
-                            if (cruzaMedianoche &&
-                                diaFinStr != null)
+                            if (cruzaMedianoche && diaFinStr != null)
                               Text(
                                 ' +1',
                                 style: TextStyle(
-                                    fontSize: 10,
-                                    color:
-                                    Colors.orange.shade700,
-                                    fontWeight: FontWeight.bold),
+                                  fontSize: 10,
+                                  color: Colors.orange.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                           ],
                         ),
@@ -1225,51 +1082,50 @@ class _TarjetaViaje extends StatelessWidget {
                   children: [
                     Text(
                       '${viaje.puntorecogida} → ${viaje.puntodejada}',
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       viaje.conductor != null
-                          ? (viaje.telefonocliente
-                          .trim()
-                          .isNotEmpty
+                          ? (viaje.telefonocliente.trim().isNotEmpty
                           ? '${viaje.conductor!.nombre} · ${viaje.telefonocliente}'
                           : viaje.conductor!.nombre)
                           : viaje.telefonocliente,
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade700),
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                     ),
                     if (viaje.cliente != null) ...[
                       const SizedBox(height: 2),
-                      Row(children: [
-                        Icon(Icons.person,
-                            size: 12,
-                            color: Colors.green.shade600),
-                        const SizedBox(width: 3),
-                        Text(viaje.cliente!.nombre,
+                      Row(
+                        children: [
+                          Icon(Icons.person, size: 12, color: Colors.green.shade600),
+                          const SizedBox(width: 3),
+                          Text(
+                            viaje.cliente!.nombre,
                             style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.w500)),
-                      ]),
+                              fontSize: 12,
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                    if (cruzaMedianoche &&
-                        diaFinStr != null) ...[
+                    if (cruzaMedianoche && diaFinStr != null) ...[
                       const SizedBox(height: 2),
-                      Row(children: [
-                        Icon(Icons.nightlight_round,
-                            size: 12,
-                            color: Colors.orange.shade600),
-                        const SizedBox(width: 3),
-                        Text('Hasta el $diaFinStr',
+                      Row(
+                        children: [
+                          Icon(Icons.nightlight_round, size: 12, color: Colors.orange.shade600),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Hasta el $diaFinStr',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.w500)),
-                      ]),
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ],
                 ),
@@ -1278,8 +1134,7 @@ class _TarjetaViaje extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined,
-                        color: Colors.blue, size: 22),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 22),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     tooltip: 'Editar',
@@ -1287,8 +1142,7 @@ class _TarjetaViaje extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline,
-                        color: Colors.red, size: 22),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     tooltip: 'Eliminar',
