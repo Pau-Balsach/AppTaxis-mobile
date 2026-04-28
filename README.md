@@ -18,7 +18,7 @@ Para utilizar la aplicación correctamente, asegúrate de cumplir con lo siguien
 
 ¿Quieres probar la aplicación rápidamente? Hemos preparado una versión de prueba con datos ficticios para que puedas explorar la interfaz y las funcionalidades sin necesidad de configurar servidores:
 
-👉 **[Descargar AppTaxis v1.0.4 (.apk)](https://github.com/Pau-Balsach/AppTaxis-mobile/releases/latest/download/app-arm64-v8a-release.apk)**
+👉 **[Descargar AppTaxis v1.0.7 (.apk)](https://github.com/Pau-Balsach/AppTaxis-mobile/releases/latest/download/app-arm64-v8a-release.apk)**
 
 *Nota: Al ser un APK fuera de la Play Store, es posible que debas habilitar la instalación desde fuentes desconocidas en tu dispositivo Android.*
 
