@@ -251,8 +251,8 @@ void main() {
 
       test('un Conductor no es igual a otro tipo', () {
         final c = Conductor(id: 1, matricula: 'X', nombre: 'X');
-        expect(c == 'string', isFalse);
-        expect(c == 1, isFalse);
+        expect(c == Object(), isFalse);
+        expect(c == <String>[], isFalse);
       });
 
       test('un Conductor es igual a sí mismo (identical)', () {

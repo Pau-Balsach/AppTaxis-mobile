@@ -41,10 +41,11 @@ local.properties
 Thumbs.db
 *.log
 
-# Plataformas de escritorio (no usadas en este proyecto)
+# Plataformas no usadas en este proyecto
 windows/
 linux/
 macos/
+web/
 
 # Metadatos locales
 .metadata

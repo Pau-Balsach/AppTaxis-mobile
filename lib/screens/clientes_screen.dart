@@ -54,8 +54,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
         SnackBar(content: Text(_errorToMessage(e, fallback: 'Error al cargar clientes.'))),
       );
     } finally {
-      if (!mounted || currentRequest != _requestId) return;
-      setState(() => _cargando = false);
+      if (mounted && currentRequest == _requestId) {
+        setState(() => _cargando = false);
+      }
     }
   }
 
@@ -405,8 +406,9 @@ class _HistorialScreenState extends State<_HistorialScreen> {
       if (!mounted) return;
       setState(() => _viajes = []);
     } finally {
-      if (!mounted) return;
-      setState(() => _cargando = false);
+      if (mounted) {
+        setState(() => _cargando = false);
+      }
     }
   }
 

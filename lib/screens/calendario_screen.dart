@@ -243,7 +243,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(color: Colors.amber.shade700, shape: BoxShape.circle),
               todayDecoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.4),
+                color: Colors.amber.withOpacity(0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -368,7 +368,7 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<Conductor>(
-              initialValue: conductorSel,
+              value: conductorSel,
               decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
                   .map((c) => DropdownMenuItem(value: c, child: Text('${c.nombre} — ${c.matricula}')))
@@ -440,6 +440,7 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
                 final inicioMin = horaSel.hour * 60 + horaSel.minute;
                 final finMin = t.hour * 60 + t.minute;
                 if (finMin < inicioMin) {
+                  if (!context.mounted) return;
                   final diaSig = await showDialog<bool>(
                     context: context,
                     builder: (c) => AlertDialog(
@@ -612,7 +613,7 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<Conductor>(
-              initialValue: conductorSel,
+              value: conductorSel,
               decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
                   .map((c) => DropdownMenuItem(value: c, child: Text('${c.nombre} — ${c.matricula}')))
@@ -681,6 +682,7 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
                 final inicioMin = horaSel.hour * 60 + horaSel.minute;
                 final finMin = t.hour * 60 + t.minute;
                 if (finMin < inicioMin) {
+                  if (!context.mounted) return;
                   final diaSig = await showDialog<bool>(
                     context: context,
                     builder: (c) => AlertDialog(
@@ -936,7 +938,7 @@ class _FiltroCondutor extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: DropdownButtonFormField<Conductor?>(
-        initialValue: seleccionado,
+        value: seleccionado,
         decoration: const InputDecoration(
           labelText: 'Filtrar por conductor',
           prefixIcon: Icon(Icons.person_search),
@@ -1027,7 +1029,7 @@ class _TarjetaViaje extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withValues(alpha: 0.4), width: 1.5),
+        side: BorderSide(color: color.withOpacity(0.4), width: 1.5),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -1043,7 +1045,7 @@ class _TarjetaViaje extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -1057,7 +1059,7 @@ class _TarjetaViaje extends StatelessWidget {
                           children: [
                             Text(
                               viaje.horaFinalizacion,
-                              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8)),
+                              style: TextStyle(fontSize: 11, color: color.withOpacity(0.8)),
                             ),
                             if (cruzaMedianoche && diaFinStr != null)
                               Text(
