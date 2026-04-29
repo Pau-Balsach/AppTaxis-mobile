@@ -46,7 +46,7 @@ ios/
 windows/
 linux/
 macos/
-test/
+
 
 # Ignorar archivos de configuración de herramientas y logs
 .metadata
