@@ -243,7 +243,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(color: Colors.amber.shade700, shape: BoxShape.circle),
               todayDecoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.4),
+                color: Colors.amber.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -368,6 +368,7 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<Conductor>(
+              // ignore: deprecated_member_use
               value: conductorSel,
               decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
@@ -375,17 +376,6 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => conductorSel = v);
-              },
-            ),
-            const SizedBox(height: 12),
-            _SelectorCliente(
-              clientes: widget.clientes,
-              seleccionado: clienteSel,
-              onChanged: (c) {
-                setState(() {
-                  clienteSel = c;
-                  if (c != null) telefonoCtrl.text = c.telefono;
-                });
               },
             ),
             const SizedBox(height: 12),
@@ -613,6 +603,7 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<Conductor>(
+              // ignore: deprecated_member_use
               value: conductorSel,
               decoration: const InputDecoration(labelText: 'Conductor', border: OutlineInputBorder()),
               items: widget.conductores
@@ -938,6 +929,7 @@ class _FiltroCondutor extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: DropdownButtonFormField<Conductor?>(
+        // ignore: deprecated_member_use
         value: seleccionado,
         decoration: const InputDecoration(
           labelText: 'Filtrar por conductor',
@@ -1029,7 +1021,7 @@ class _TarjetaViaje extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withOpacity(0.4), width: 1.5),
+        side: BorderSide(color: color.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -1045,7 +1037,7 @@ class _TarjetaViaje extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -1059,7 +1051,7 @@ class _TarjetaViaje extends StatelessWidget {
                           children: [
                             Text(
                               viaje.horaFinalizacion,
-                              style: TextStyle(fontSize: 11, color: color.withOpacity(0.8)),
+                              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8)),
                             ),
                             if (cruzaMedianoche && diaFinStr != null)
                               Text(

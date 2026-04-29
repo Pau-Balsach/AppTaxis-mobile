@@ -252,6 +252,7 @@ void main() {
       test('un Conductor no es igual a otro tipo', () {
         final c = Conductor(id: 1, matricula: 'X', nombre: 'X');
         expect(c == Object(), isFalse);
+        // ignore: unrelated_type_equality_checks
         expect(c == <String>[], isFalse);
       });
 
