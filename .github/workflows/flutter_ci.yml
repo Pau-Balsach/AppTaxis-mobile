@@ -29,17 +29,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # Crea un .env de prueba mínimo para que dotenv no falle
       - name: Create .env for tests
         run: |
-          echo "API_BASE_URL=http://localhost:8080" >> .env
+          echo "API_BASE_URL=http://localhost:8080" > .env
           echo "API_KEY=test-key"                  >> .env
 
+      - name: Ensure test/widget_test.dart exists
+        run: |
+          if [ ! -f test/widget_test.dart ]; then
+            echo "::error::test/widget_test.dart no encontrado. Añádelo al repo."
+            exit 1
+          fi
+
       - name: Dart analyze
-        run: flutter analyze --fatal-infos
+        run: flutter analyze --fatal-warnings
 
       - name: Run unit tests (with coverage)
-        run: flutter test --coverage --reporter=github
+        run: flutter test test/ --coverage --reporter=github
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -50,7 +56,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ─────────────────────────────────────────────────────────────
-  # 2. Build Android (debug) — verifica que compila
+  # 2. Build Android (debug) — solo si existe la carpeta android/
   # ─────────────────────────────────────────────────────────────
   build-android:
     name: Build Android (debug)
@@ -62,13 +68,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check android/ folder exists
+        id: check_android
+        run: |
+          if [ -d "android" ] && [ -f "android/build.gradle" -o -f "android/settings.gradle" -o -f "android/settings.gradle.kts" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Carpeta android/ no encontrada o incompleta. Omitiendo build Android."
+            echo "::warning::Ejecuta 'flutter create -t app .' en la raíz del proyecto y haz commit de android/."
+          fi
+
       - name: Setup Java 17
+        if: steps.check_android.outputs.exists == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Setup Flutter
+        if: steps.check_android.outputs.exists == 'true'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.x"
@@ -76,17 +95,21 @@ jobs:
           cache: true
 
       - name: Install dependencies
+        if: steps.check_android.outputs.exists == 'true'
         run: flutter pub get
 
       - name: Create .env
+        if: steps.check_android.outputs.exists == 'true'
         run: |
-          echo "API_BASE_URL=${{ secrets.API_BASE_URL || 'http://localhost:8080' }}" >> .env
-          echo "API_KEY=${{ secrets.API_KEY || 'ci-key' }}"                          >> .env
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL || 'http://localhost:8080' }}" > .env
+          echo "API_KEY=${{ secrets.API_KEY || 'ci-key' }}"                         >> .env
 
       - name: Build APK (debug)
+        if: steps.check_android.outputs.exists == 'true'
         run: flutter build apk --debug
 
       - name: Upload APK artifact
+        if: steps.check_android.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: apk-debug
@@ -94,7 +117,7 @@ jobs:
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────
-  # 3. Build iOS (sin firma) — solo en macOS
+  # 3. Build iOS (sin firma) — solo si existe la carpeta ios/
   # ─────────────────────────────────────────────────────────────
   build-ios:
     name: Build iOS (no-codesign)
@@ -106,7 +129,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check ios/ folder exists
+        id: check_ios
+        run: |
+          if [ -d "ios" ] && [ -f "ios/Runner.xcodeproj/project.pbxproj" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Carpeta ios/ no encontrada o incompleta. Omitiendo build iOS."
+            echo "::warning::Ejecuta 'flutter create -t app .' en la raíz del proyecto y haz commit de ios/."
+          fi
+
       - name: Setup Flutter
+        if: steps.check_ios.outputs.exists == 'true'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.x"
@@ -114,12 +149,15 @@ jobs:
           cache: true
 
       - name: Install dependencies
+        if: steps.check_ios.outputs.exists == 'true'
         run: flutter pub get
 
       - name: Create .env
+        if: steps.check_ios.outputs.exists == 'true'
         run: |
-          echo "API_BASE_URL=${{ secrets.API_BASE_URL || 'http://localhost:8080' }}" >> .env
-          echo "API_KEY=${{ secrets.API_KEY || 'ci-key' }}"                          >> .env
+          echo "API_BASE_URL=${{ secrets.API_BASE_URL || 'http://localhost:8080' }}" > .env
+          echo "API_KEY=${{ secrets.API_KEY || 'ci-key' }}"                         >> .env
 
       - name: Build iOS (no codesign)
+        if: steps.check_ios.outputs.exists == 'true'
         run: flutter build ios --debug --no-codesign

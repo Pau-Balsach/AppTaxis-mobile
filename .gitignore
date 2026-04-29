@@ -14,8 +14,10 @@
 .pub/
 build/
 
+# pubspec.lock SÍ se commitea en apps (garantiza versiones reproducibles)
+# analysis_options.yaml SÍ se commitea (reglas de análisis compartidas)
+
 # ── IDEs (ANDROID STUDIO / VS CODE) ──────────────────────────────────
-# Ignorar configuraciones locales del editor y del equipo
 .idea/
 *.iml
 *.ipr
@@ -24,8 +26,8 @@ build/
 .history/
 captures/
 
-# ── ANDROID ─────────────────────────────────────────────────────────
-# Archivos específicos de la compilación de Android
+# ── ANDROID ──────────────────────────────────────────────────────────
+# Solo archivos locales/compilados — la carpeta android/ SÍ se sube
 .gradle/
 local.properties
 **/android/**/generated/
@@ -34,24 +36,17 @@ local.properties
 *.keystore
 *.jks
 
-# ── OTROS ───────────────────────────────────────────────────────────
-# Archivos del sistema y temporales
+# ── OTROS ────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.log
 
-# Ignorar carpetas de plataformas que no usas o no quieres
-android/
-ios/
+# Plataformas de escritorio (no usadas en este proyecto)
 windows/
 linux/
 macos/
 
-
-# Ignorar archivos de configuración de herramientas y logs
+# Metadatos locales
 .metadata
-pubspec.lock
-analysis_options.yaml
 devtools_options.yaml
 cosa.txt
-*.log
