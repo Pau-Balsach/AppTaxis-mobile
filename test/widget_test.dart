@@ -72,6 +72,9 @@ void main() {
     group('fromJson', () {
       test('todos los campos', () {
         final c = Cliente.fromJson(_clienteJson(
+          id: 1,
+          nombre: 'Ana García',
+          telefono: '612345678',
           email: 'ana@example.com',
           notas: 'Cliente VIP',
           adminId: 'admin-001',
