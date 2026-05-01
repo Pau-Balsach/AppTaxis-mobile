@@ -52,6 +52,28 @@ La API Key debe estar registrada previamente en la base de datos del servidor (t
 
 ---
 
+## 🧪 Tests
+
+Los tests unitarios se ubican en `test/widget_test.dart` y cubren la capa de modelos y excepciones sin dependencias externas ni UI.
+
+| Grupo | Qué se verifica |
+| :--- | :--- |
+| **Cliente** | `fromJson` (todos los campos, opcionales nulos, alias `adminId`/`admin_id`, prioridad camelCase) · `toJson` (omisión de nulos, presencia de obligatorios, round-trip) |
+| **Conductor** | `fromJson` (alias `cond_admin`/`condAdmin`, campo nulo) · `toJson` (inclusión/omisión de `cond_admin`) · Igualdad y `hashCode` basados en `id` (uso en `Map` y `Set`) |
+| **Viaje** | `fromJson` (parseo completo, recorte de hora a `HH:mm`, conductor y cliente anidados, campos nulos) · `cruzaMedianoche` (diaFin distinto, igual o nulo) · Conversión `DateTime` · `toJson` y `toJsonConCliente` (inclusión/omisión de cliente, fallback de `diaFin`) |
+| **AppException** | `toString`, `statusCode`, herencia correcta de `NetworkException`, `RequestTimeoutException`, `AuthException` y `ServerException` · Captura genérica como `Exception` |
+| **Integración** | Parseo de relaciones anidadas Viaje ↔ Conductor ↔ Cliente · Agrupación por conductor en `Map` · Ordenación por hora · Filtrado de viajes por día (lógica de calendario) · Sobreescritura de `clienteId` en `toJsonConCliente` |
+
+Para ejecutar los tests localmente:
+
+```bash
+flutter test test/ --coverage
+```
+
+El CI ejecuta los tests automáticamente en cada push o pull request a `main`, `master` o `develop`, con reporte de cobertura vía Codecov.
+
+---
+
 ## 📦 Dependencias Principales
 
 La aplicación utiliza las siguientes tecnologías clave:
