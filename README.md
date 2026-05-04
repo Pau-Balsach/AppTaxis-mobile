@@ -18,7 +18,7 @@ Para utilizar la aplicación correctamente, asegúrate de cumplir con lo siguien
 
 ¿Quieres probar la aplicación rápidamente? Hemos preparado una versión de prueba con datos ficticios para que puedas explorar la interfaz y las funcionalidades sin necesidad de configurar servidores:
 
-👉 **[Descargar AppTaxis v1.0.7 (.apk)](https://github.com/Pau-Balsach/AppTaxis-mobile/releases/latest/download/app-arm64-v8a-release.apk)**
+👉 **[Descargar AppTaxis v1.0.8 (.apk)](https://github.com/Pau-Balsach/AppTaxis-mobile/releases/latest/download/app-arm64-v8a-release.apk)**
 
 *Nota: Al ser un APK fuera de la Play Store, es posible que debas habilitar la instalación desde fuentes desconocidas en tu dispositivo Android.*
 
@@ -33,9 +33,14 @@ Para compilar la aplicación con tus propias credenciales, crea un archivo `.env
 ```
 API_BASE_URL=https://tu-api-taxis.com
 API_KEY=tu_clave_secreta_aquí
+DEFAULT_LAT=41.3851
+DEFAULT_LNG=2.1734
+DEFAULT_RADIUS_KM=50
 ```
 
-La API Key debe estar registrada previamente en la base de datos del servidor (tabla `api_keys`, campo `key_hash` con el SHA-256 de la clave y `activa = true`).
+* `API_KEY` debe estar registrada previamente en la base de datos del servidor (tabla `api_keys`, campo `key_hash` con el SHA-256 de la clave y `activa = true`).
+* `DEFAULT_LAT` / `DEFAULT_LNG` definen las coordenadas de sesgo para el autocompletado de direcciones cuando el GPS no está disponible.
+* `DEFAULT_RADIUS_KM` define el radio de búsqueda preferente alrededor de las coordenadas anteriores.
 
 ---
 
@@ -47,8 +52,27 @@ La API Key debe estar registrada previamente en la base de datos del servidor (t
 | **👥 Gestión de Conductores** | Registro (CRUD) completo de conductores con validación de matrículas (formato 1234ABC). |
 | **📅 Calendario de Viajes** | Visualización interactiva de servicios por día con indicadores de ocupación por conductor (código de colores). |
 | **⚡ Asignación en Vivo** | Creación, edición y eliminación de viajes asignados a conductores específicos en tiempo real. |
-| **👤 Gestión de Clientes** | Asignación y modificación de clientes en viajes, con búsqueda por nombre o teléfono y autocompletado de datos. |
+| **👤 Gestión de Clientes** | Asignación de clientes en viajes (tanto al crear como al editar), con búsqueda por nombre o teléfono y autocompletado de datos de contacto. |
+| **📍 Autocompletado de Direcciones** | Búsqueda de puntos de recogida y dejada vía Nominatim (OpenStreetMap), con sesgo geográfico por GPS o coordenadas fijas. Funciona correctamente con el teclado abierto en Android. |
 | **🌙 Viajes de Madrugada** | Soporte completo para viajes que cruzan la medianoche, con detección automática y confirmación del día de finalización. |
+
+---
+
+## 🐛 Correcciones Recientes
+
+### v1.1.0
+
+**Autocompletado de direcciones (`PlacesAutocompleteField`)**
+
+- **Sugerencias no seleccionables con teclado abierto** — Causa raíz: el `OverlayEntry` dentro de un `AlertDialog` crea un árbol de renderizado separado. Con `adjustPan` activo en Android, el sistema desplaza la ventana nativa pero no recalcula las zonas táctiles registradas, provocando un desfase entre la posición visual de las sugerencias y donde Android registra los toques. Solución: las sugerencias se renderizan ahora **inline** (dentro del mismo árbol del widget, como un `Column` hijo), eliminando el problema de hit-testing por completo.
+
+- **Crash `RenderShrinkWrappingViewport does not support returning intrinsic dimensions`** — `AlertDialog` envuelve su contenido en `IntrinsicWidth` para calcular su ancho óptimo. `ListView` con `shrinkWrap: true` usa un `RenderShrinkWrappingViewport` que prohíbe el cálculo de dimensiones intrínsecas y lanza la excepción. Solución: `ListView` reemplazado por `SingleChildScrollView` + `Column` con ítems generados directamente, eliminando cualquier viewport del árbol.
+
+- **Lista de sugerencias recortada por el clip del diálogo** — El `AlertDialog` fija su altura máxima y recorta el contenido que la supera. Cuando las sugerencias aparecen, el `Column` del diálogo crece más allá de ese límite. Solución: `Scrollable.ensureVisible` con `alignmentPolicy: keepVisibleAtEnd` hace scroll automático en el `SingleChildScrollView` del diálogo tras cada búsqueda, garantizando que la lista quede siempre completamente visible.
+
+**Formulario de creación de viajes (`_DialogoCrearViaje`)**
+
+- **`_SelectorCliente` ausente en el diálogo de creación** — El widget estaba implementado y presente en el diálogo de edición, pero había sido omitido en el árbol del diálogo de creación. Añadido en la posición correcta (tras el selector de conductor), con la misma lógica de autocompletado de teléfono que en edición.
 
 ---
 
@@ -76,12 +100,13 @@ El CI ejecuta los tests automáticamente en cada push o pull request a `main`, `
 
 ## 📦 Dependencias Principales
 
-La aplicación utiliza las siguientes tecnologías clave:
-
-* **`http`**: Comunicación robusta con el servidor central (API REST).
-* **`flutter_dotenv`**: Carga de variables de entorno desde el archivo `.env`.
-* **`table_calendar`**: Interfaz de calendario interactiva.
-* **`intl`**: Soporte para formatos de fecha/hora internacionales.
+| Paquete | Uso |
+| :--- | :--- |
+| **`dio`** | Comunicación con el servidor central (API REST) y peticiones a Nominatim. |
+| **`flutter_dotenv`** | Carga de variables de entorno desde el archivo `.env`. |
+| **`geolocator`** | Obtención de la posición GPS para sesgar el autocompletado de direcciones. |
+| **`table_calendar`** | Interfaz de calendario interactiva. |
+| **`intl`** | Soporte para formatos de fecha/hora internacionales. |
 
 ---
 
@@ -94,5 +119,7 @@ lib/
 ├── models/      # Definición de objetos de datos (Conductor, Viaje, Cliente)
 ├── screens/     # Pantallas de la interfaz de usuario (Menú, Calendario, Conductores, Clientes)
 ├── services/    # Lógica de conexión con la API REST
+├── utils/       # Utilidades (apertura de mapas, etc.)
+├── widgets/     # Widgets reutilizables (PlacesAutocompleteField, etc.)
 └── main.dart    # Punto de entrada y configuración global de la aplicación
 ```

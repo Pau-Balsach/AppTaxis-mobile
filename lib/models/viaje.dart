@@ -12,6 +12,10 @@ class Viaje {
   final String telefonocliente;
   final Conductor? conductor;
   final Cliente? cliente;
+  final double? latRecogida;
+  final double? lngRecogida;
+  final double? latDejada;
+  final double? lngDejada;
 
   Viaje({
     required this.id,
@@ -24,6 +28,10 @@ class Viaje {
     required this.telefonocliente,
     this.conductor,
     this.cliente,
+    this.latRecogida,
+    this.lngRecogida,
+    this.latDejada,
+    this.lngDejada,
   });
 
   factory Viaje.fromJson(Map<String, dynamic> json) {
@@ -45,6 +53,10 @@ class Viaje {
       cliente: json['cliente'] != null
           ? Cliente.fromJson(json['cliente'] as Map<String, dynamic>)
           : null,
+      latRecogida: (json['latRecogida'] as num?)?.toDouble(),
+      lngRecogida: (json['lngRecogida'] as num?)?.toDouble(),
+      latDejada:   (json['latDejada'] as num?)?.toDouble(),
+      lngDejada:   (json['lngDejada'] as num?)?.toDouble(),
     );
   }
 
@@ -67,6 +79,10 @@ class Viaje {
     'puntodejada': puntodejada,
     'telefonocliente': telefonocliente,
     if (clienteId != null) 'cliente': {'id': clienteId},
+    if (latRecogida != null) 'latRecogida': latRecogida,
+    if (lngRecogida != null) 'lngRecogida': lngRecogida,
+    if (latDejada != null)   'latDejada': latDejada,
+    if (lngDejada != null)   'lngDejada': lngDejada,
   };
 
   DateTime get diaDateTime => DateTime.parse(dia);

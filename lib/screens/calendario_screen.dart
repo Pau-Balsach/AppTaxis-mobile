@@ -7,6 +7,8 @@ import '../models/viaje.dart';
 import '../models/cliente.dart';
 import '../services/api_client.dart';
 import '../services/app_exception.dart';
+import '../widgets/places_autocomplete_field.dart';
+import '../utils/maps_launcher.dart';
 
 const List<Color> _conductorColors = [
   Color(0xFF1565C0),
@@ -223,86 +225,99 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          _FiltroCondutor(
-            conductores: _conductores,
-            seleccionado: _conductorFiltro,
-            onChanged: (c) {
-              setState(() => _conductorFiltro = c);
-              _cargarTodo();
-            },
-          ),
-          if (_conductores.isNotEmpty) _LeyendaColores(conductores: _conductores),
-          TableCalendar<Viaje>(
-            firstDay: DateTime(2020),
-            lastDay: DateTime(2030),
-            focusedDay: _focusMes,
-            selectedDayPredicate: (d) => isSameDay(d, _diaSeleccionado),
-            eventLoader: _viajesParaDia,
-            calendarStyle: CalendarStyle(
-              selectedDecoration: BoxDecoration(color: Colors.amber.shade700, shape: BoxShape.circle),
-              todayDecoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-            ),
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, day, events) {
-                if (events.isEmpty) return const SizedBox();
-                return Positioned(
-                  bottom: 6,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: events.take(4).map((viaje) {
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                        width: 7.0,
-                        height: 7.0,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _colorViaje(viaje),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                );
+          : CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _FiltroCondutor(
+              conductores: _conductores,
+              seleccionado: _conductorFiltro,
+              onChanged: (c) {
+                setState(() => _conductorFiltro = c);
+                _cargarTodo();
               },
             ),
-            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-            onDaySelected: (sel, foc) => setState(() {
-              _diaSeleccionado = sel;
-              _focusMes = foc;
-            }),
-            onPageChanged: (foc) {
-              _focusMes = foc;
-              _cargarTodo();
-            },
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: _viajesDia.isEmpty
-                ? Center(
-              child: Text(
-                'No hay viajes el ${DateFormat('dd/MM/yyyy').format(_diaSeleccionado)}',
-                style: const TextStyle(color: Colors.grey),
+          if (_conductores.isNotEmpty)
+            SliverToBoxAdapter(child: _LeyendaColores(conductores: _conductores)),
+          SliverToBoxAdapter(
+            child: TableCalendar<Viaje>(
+              firstDay: DateTime(2020),
+              lastDay: DateTime(2030),
+              focusedDay: _focusMes,
+              selectedDayPredicate: (d) => isSameDay(d, _diaSeleccionado),
+              eventLoader: _viajesParaDia,
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(color: Colors.amber.shade700, shape: BoxShape.circle),
+                todayDecoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, day, events) {
+                  if (events.isEmpty) return const SizedBox();
+                  return Positioned(
+                    bottom: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: events.take(4).map((viaje) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                          width: 7.0,
+                          height: 7.0,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _colorViaje(viaje),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
+              ),
+              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+              onDaySelected: (sel, foc) => setState(() {
+                _diaSeleccionado = sel;
+                _focusMes = foc;
+              }),
+              onPageChanged: (foc) {
+                _focusMes = foc;
+                _cargarTodo();
+              },
+            ),
+          ),
+          const SliverToBoxAdapter(child: Divider(height: 1)),
+          if (_viajesDia.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  'No hay viajes el ${DateFormat('dd/MM/yyyy').format(_diaSeleccionado)}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ),
             )
-                : ListView.separated(
+          else
+            SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
-              itemCount: _viajesDia.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) {
-                final v = _viajesDia[i];
-                return _TarjetaViaje(
-                  viaje: v,
-                  color: _colorViaje(v),
-                  onEditar: () => _editarViaje(v),
-                  onEliminar: () => _eliminarViaje(v),
-                );
-              },
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (_, i) {
+                    final v = _viajesDia[i];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: i < _viajesDia.length - 1 ? 8 : 0),
+                      child: _TarjetaViaje(
+                        viaje: v,
+                        color: _colorViaje(v),
+                        onEditar: () => _editarViaje(v),
+                        onEliminar: () => _eliminarViaje(v),
+                      ),
+                    );
+                  },
+                  childCount: _viajesDia.length,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -335,10 +350,16 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
   late TimeOfDay horaSel;
   late TimeOfDay horaFinSel;
 
-  final recogidaCtrl = TextEditingController();
-  final dejadaCtrl = TextEditingController();
   final telefonoCtrl = TextEditingController();
   bool _guardando = false;
+
+  // Ubicaciones seleccionadas desde el autocompletado
+  String _recogidaTexto = '';
+  double? _recogidaLat;
+  double? _recogidaLng;
+  String _dejadaTexto = '';
+  double? _dejadaLat;
+  double? _dejadaLng;
 
   @override
   void initState() {
@@ -351,8 +372,6 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
 
   @override
   void dispose() {
-    recogidaCtrl.dispose();
-    dejadaCtrl.dispose();
     telefonoCtrl.dispose();
     super.dispose();
   }
@@ -376,6 +395,17 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => conductorSel = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            _SelectorCliente(
+              clientes: widget.clientes,
+              seleccionado: clienteSel,
+              onChanged: (c) {
+                setState(() {
+                  clienteSel = c;
+                  if (c != null) telefonoCtrl.text = c.telefono;
+                });
               },
             ),
             const SizedBox(height: 12),
@@ -453,14 +483,24 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
               },
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: recogidaCtrl,
-              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
+            PlacesAutocompleteField(
+              labelText: 'Punto de recogida',
+              initialValue: _recogidaTexto,
+              onPlaceSelected: (result) => setState(() {
+                _recogidaTexto = result.direccion;
+                _recogidaLat   = result.lat;
+                _recogidaLng   = result.lng;
+              }),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: dejadaCtrl,
-              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
+            PlacesAutocompleteField(
+              labelText: 'Punto de dejada',
+              initialValue: _dejadaTexto,
+              onPlaceSelected: (result) => setState(() {
+                _dejadaTexto = result.direccion;
+                _dejadaLat   = result.lat;
+                _dejadaLng   = result.lng;
+              }),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -489,7 +529,7 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
   }
 
   Future<void> _guardar() async {
-    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
+    if (_recogidaTexto.trim().isEmpty || _dejadaTexto.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
         const SnackBar(content: Text('Rellena todos los campos.')),
       );
@@ -504,9 +544,13 @@ class _DialogoCrearViajeState extends State<_DialogoCrearViaje> {
       diaFin: DateFormat('yyyy-MM-dd').format(diaFinSel),
       hora: _formatHora(horaSel),
       horaFinalizacion: _formatHora(horaFinSel),
-      puntorecogida: recogidaCtrl.text.trim(),
-      puntodejada: dejadaCtrl.text.trim(),
+      puntorecogida: _recogidaTexto.trim(),
+      puntodejada: _dejadaTexto.trim(),
       telefonocliente: telefonoCtrl.text.trim(),
+      latRecogida: _recogidaLat,
+      lngRecogida: _recogidaLng,
+      latDejada: _dejadaLat,
+      lngDejada: _dejadaLng,
     );
 
     try {
@@ -548,10 +592,16 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
   late TimeOfDay horaSel;
   late TimeOfDay horaFinSel;
 
-  late TextEditingController recogidaCtrl;
-  late TextEditingController dejadaCtrl;
   late TextEditingController telefonoCtrl;
   bool _guardando = false;
+
+  // Ubicaciones con coordenadas
+  late String _recogidaTexto;
+  double? _recogidaLat;
+  double? _recogidaLng;
+  late String _dejadaTexto;
+  double? _dejadaLat;
+  double? _dejadaLng;
 
   TimeOfDay _parseHora(String hhmm) {
     final p = hhmm.split(':');
@@ -581,15 +631,19 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
     horaSel = _parseHora(v.hora);
     horaFinSel = _parseHora(v.horaFinalizacion);
 
-    recogidaCtrl = TextEditingController(text: v.puntorecogida);
-    dejadaCtrl = TextEditingController(text: v.puntodejada);
+    // Inicializar ubicaciones con los valores actuales del viaje
+    _recogidaTexto = v.puntorecogida;
+    _recogidaLat   = v.latRecogida;
+    _recogidaLng   = v.lngRecogida;
+    _dejadaTexto   = v.puntodejada;
+    _dejadaLat     = v.latDejada;
+    _dejadaLng     = v.lngDejada;
+
     telefonoCtrl = TextEditingController(text: v.telefonocliente);
   }
 
   @override
   void dispose() {
-    recogidaCtrl.dispose();
-    dejadaCtrl.dispose();
     telefonoCtrl.dispose();
     super.dispose();
   }
@@ -698,14 +752,24 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
               },
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: recogidaCtrl,
-              decoration: const InputDecoration(labelText: 'Punto de recogida', border: OutlineInputBorder()),
+            PlacesAutocompleteField(
+              labelText: 'Punto de recogida',
+              initialValue: _recogidaTexto,
+              onPlaceSelected: (result) => setState(() {
+                _recogidaTexto = result.direccion;
+                _recogidaLat   = result.lat;
+                _recogidaLng   = result.lng;
+              }),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: dejadaCtrl,
-              decoration: const InputDecoration(labelText: 'Punto de dejada', border: OutlineInputBorder()),
+            PlacesAutocompleteField(
+              labelText: 'Punto de dejada',
+              initialValue: _dejadaTexto,
+              onPlaceSelected: (result) => setState(() {
+                _dejadaTexto = result.direccion;
+                _dejadaLat   = result.lat;
+                _dejadaLng   = result.lng;
+              }),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -734,7 +798,7 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
   }
 
   Future<void> _actualizar() async {
-    if (recogidaCtrl.text.trim().isEmpty || dejadaCtrl.text.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
+    if (_recogidaTexto.trim().isEmpty || _dejadaTexto.trim().isEmpty || telefonoCtrl.text.trim().isEmpty) {
       rootScaffoldKey.currentState?.showSnackBar(
         const SnackBar(content: Text('Rellena todos los campos.')),
       );
@@ -749,11 +813,15 @@ class _DialogoEditarViajeState extends State<_DialogoEditarViaje> {
       diaFin: DateFormat('yyyy-MM-dd').format(diaFinSel),
       hora: _formatHora(horaSel),
       horaFinalizacion: _formatHora(horaFinSel),
-      puntorecogida: recogidaCtrl.text.trim(),
-      puntodejada: dejadaCtrl.text.trim(),
+      puntorecogida: _recogidaTexto.trim(),
+      puntodejada: _dejadaTexto.trim(),
       telefonocliente: telefonoCtrl.text.trim(),
       conductor: conductorSel,
       cliente: clienteSel,
+      latRecogida: _recogidaLat,
+      lngRecogida: _recogidaLng,
+      latDejada: _dejadaLat,
+      lngDejada: _dejadaLng,
     );
 
     try {
@@ -1074,9 +1142,66 @@ class _TarjetaViaje extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${viaje.puntorecogida} → ${viaje.puntodejada}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    // Recogida pulsable → abre Google Maps
+                    GestureDetector(
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        abrirEnMaps(
+                          viaje.puntorecogida,
+                          lat: viaje.latRecogida,
+                          lng: viaje.lngRecogida,
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on, size: 13, color: Colors.blue.shade400),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              viaje.puntorecogida,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blue.shade700,
+                                decoration: TextDecoration.underline,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    // Dejada pulsable → abre Google Maps
+                    GestureDetector(
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        abrirEnMaps(
+                          viaje.puntodejada,
+                          lat: viaje.latDejada,
+                          lng: viaje.lngDejada,
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Icon(Icons.flag, size: 13, color: Colors.blue.shade400),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              viaje.puntodejada,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blue.shade700,
+                                decoration: TextDecoration.underline,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
