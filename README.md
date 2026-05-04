@@ -1,6 +1,6 @@
 ﻿# AppTaxis — Gestión de Taxis en la Palma de tu Mano 🚖
 
-AppTaxis es una solución móvil moderna diseñada para la gestión eficiente de conductores y viajes en tiempo real. Esta aplicación permite a los administradores organizar la logística diaria de forma sencilla e intuitiva desde cualquier lugar.
+AppTaxis es una solución móvil moderna diseñada para la gestión eficiente de conductores, clientes y viajes en tiempo real. Esta aplicación permite a los administradores organizar la logística diaria de forma sencilla e intuitiva desde cualquier lugar.
 
 ---
 
@@ -9,7 +9,7 @@ AppTaxis es una solución móvil moderna diseñada para la gestión eficiente de
 Para utilizar la aplicación correctamente, asegúrate de cumplir con lo siguiente:
 
 * **📱 Dispositivo:** Smartphone o Tablet con Android 8.0 (Oreo) o superior.
-* **🌐 Conexión a Internet:** Se requiere una conexión activa (WiFi o Datos Móviles) para sincronizar viajes y conductores.
+* **🌐 Conexión a Internet:** Se requiere una conexión activa (WiFi o Datos Móviles) para sincronizar viajes, conductores y clientes.
 * **🔑 Acceso:** La aplicación utiliza una API Key integrada en el compilado, sin necesidad de credenciales por parte del usuario.
 
 ---
@@ -49,12 +49,34 @@ DEFAULT_RADIUS_KM=50
 | Módulo | Descripción |
 | :--- | :--- |
 | **🔑 Autenticación por API Key** | Acceso directo sin pantalla de login. La clave se incluye en el compilado y se envía en cada petición como header `X-API-Key`. |
-| **👥 Gestión de Conductores** | Registro (CRUD) completo de conductores con validación de matrículas (formato 1234ABC). |
-| **📅 Calendario de Viajes** | Visualización interactiva de servicios por día con indicadores de ocupación por conductor (código de colores). |
+| **👥 Gestión de Conductores** | CRUD completo de conductores con validación de matrículas (formato `1234ABC`). |
+| **👤 Gestión de Clientes** | CRUD completo de clientes con campos de nombre, teléfono, email y notas. Búsqueda en tiempo real con debounce de 350 ms. Al seleccionar un cliente en un viaje, su teléfono se autocompleta automáticamente. |
+| **📅 Calendario de Viajes** | Visualización interactiva de servicios por día con indicadores de ocupación por conductor en código de colores. Filtro por conductor individual. |
 | **⚡ Asignación en Vivo** | Creación, edición y eliminación de viajes asignados a conductores específicos en tiempo real. |
-| **👤 Gestión de Clientes** | Asignación de clientes en viajes (tanto al crear como al editar), con búsqueda por nombre o teléfono y autocompletado de datos de contacto. |
-| **📍 Autocompletado de Direcciones** | Búsqueda de puntos de recogida y dejada vía Nominatim (OpenStreetMap), con sesgo geográfico por GPS o coordenadas fijas. Funciona correctamente con el teclado abierto en Android. |
+| **📍 Autocompletado de Direcciones** | Búsqueda de puntos de recogida y dejada vía Nominatim (OpenStreetMap), con sesgo geográfico por GPS o coordenadas fijas. Renderizado inline para compatibilidad con el teclado de Android. |
+| **🗺️ Apertura en Mapas** | Cada punto de recogida y dejada incluye un botón para abrir la dirección directamente en Google Maps, usando coordenadas exactas si están disponibles o búsqueda por nombre en caso contrario. |
 | **🌙 Viajes de Madrugada** | Soporte completo para viajes que cruzan la medianoche, con detección automática y confirmación del día de finalización. |
+
+---
+
+## 📍 Autocompletado de Direcciones Reales
+
+El widget `PlacesAutocompleteField` permite buscar direcciones reales de España utilizando la API pública de **Nominatim (OpenStreetMap)**, sin coste ni API key.
+
+**Cómo funciona:**
+
+1. El usuario empieza a escribir una dirección (mínimo 3 caracteres).
+2. Con un debounce de 400 ms, se lanza una búsqueda contra `nominatim.openstreetmap.org` con `countrycodes=es`.
+3. Si el GPS está disponible y el usuario ha dado permiso, la búsqueda se sesga geográficamente usando un `viewbox` centrado en la posición actual. Si no hay GPS, se usan las coordenadas fijas de `.env` (`DEFAULT_LAT`, `DEFAULT_LNG`, `DEFAULT_RADIUS_KM`).
+4. Se muestran hasta 5 sugerencias inline (sin `OverlayEntry`) con nombre principal y localidad.
+5. Al seleccionar una sugerencia, el campo se rellena con la dirección completa y se notifica al widget padre con el objeto `PlaceResult` (dirección, latitud, longitud).
+6. Las coordenadas resultantes se guardan en el viaje (`latRecogida`, `lngRecogida`, `latDejada`, `lngDejada`) y se usan posteriormente para abrir Google Maps con precisión de pin.
+
+**Decisiones técnicas del widget:**
+
+* **Renderizado inline en lugar de `OverlayEntry`** — Con `adjustPan` activo en Android, el sistema desplaza la ventana nativa pero no recalcula las zonas táctiles del overlay, provocando un desfase entre la posición visual de las sugerencias y donde Android registra los toques. Al renderizar las sugerencias como un `Column` hijo dentro del mismo árbol del widget, el hit-testing es siempre correcto.
+* **`SingleChildScrollView` + `Column` en lugar de `ListView`** — `AlertDialog` envuelve su contenido en `IntrinsicWidth` para calcular su ancho. `ListView` con `shrinkWrap: true` usa un `RenderShrinkWrappingViewport` que prohíbe el cálculo de dimensiones intrínsecas y lanza una excepción en tiempo de ejecución. La combinación `SingleChildScrollView` + `Column` elimina completamente cualquier viewport del árbol.
+* **`Scrollable.ensureVisible` con `keepVisibleAtEnd`** — Tras cada búsqueda, se llama a `ensureVisible` en el `postFrameCallback` para que el `SingleChildScrollView` del `AlertDialog` haga scroll automático y la lista de sugerencias quede siempre completamente visible, sin ser recortada por el clip del diálogo.
 
 ---
 
@@ -102,24 +124,35 @@ El CI ejecuta los tests automáticamente en cada push o pull request a `main`, `
 
 | Paquete | Uso |
 | :--- | :--- |
-| **`dio`** | Comunicación con el servidor central (API REST) y peticiones a Nominatim. |
+| **`dio`** | Peticiones HTTP a Nominatim para el autocompletado de direcciones. |
+| **`http`** | Comunicación con el servidor central (API REST). |
 | **`flutter_dotenv`** | Carga de variables de entorno desde el archivo `.env`. |
 | **`geolocator`** | Obtención de la posición GPS para sesgar el autocompletado de direcciones. |
-| **`table_calendar`** | Interfaz de calendario interactiva. |
+| **`url_launcher`** | Apertura de direcciones en Google Maps desde los detalles del viaje. |
+| **`table_calendar`** | Interfaz de calendario interactiva con marcadores por conductor. |
 | **`intl`** | Soporte para formatos de fecha/hora internacionales. |
 
 ---
 
 ## 🏗️ Estructura del Proyecto
 
-El código fuente está organizado siguiendo las mejores prácticas de Flutter para garantizar la escalabilidad:
-
 ```text
 lib/
-├── models/      # Definición de objetos de datos (Conductor, Viaje, Cliente)
-├── screens/     # Pantallas de la interfaz de usuario (Menú, Calendario, Conductores, Clientes)
-├── services/    # Lógica de conexión con la API REST
-├── utils/       # Utilidades (apertura de mapas, etc.)
-├── widgets/     # Widgets reutilizables (PlacesAutocompleteField, etc.)
-└── main.dart    # Punto de entrada y configuración global de la aplicación
+├── models/
+│   ├── cliente.dart       # Modelo Cliente con fromJson / toJson
+│   ├── conductor.dart     # Modelo Conductor con igualdad por id
+│   └── viaje.dart         # Modelo Viaje con soporte de madrugada y coordenadas
+├── screens/
+│   ├── calendario_screen.dart   # Calendario interactivo de viajes por conductor
+│   ├── clientes_screen.dart     # CRUD de clientes e historial de viajes
+│   ├── conductores_screen.dart  # CRUD de conductores con validación de matrícula
+│   └── menu_screen.dart         # Pantalla principal de navegación
+├── services/
+│   ├── api_client.dart    # Comunicación con la API REST (conductores, viajes, clientes)
+│   └── app_exception.dart # Jerarquía de excepciones tipadas
+├── utils/
+│   └── maps_launcher.dart # Apertura de direcciones en Google Maps
+├── widgets/
+│   └── places_autocomplete_field.dart  # Campo con autocompletado Nominatim inline
+└── main.dart              # Punto de entrada y configuración global del tema
 ```
